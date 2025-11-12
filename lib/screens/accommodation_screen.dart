@@ -39,6 +39,8 @@ class AccommodationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isLandscape = MediaQuery.of(context).orientation == Orientation.landscape;
+    
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -53,115 +55,117 @@ class AccommodationScreen extends StatelessWidget {
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(isLandscape ? 12 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Enhanced Header Section
-            _buildHeaderSection(),
-            const SizedBox(height: 24),
+            _buildHeaderSection(isLandscape),
+            SizedBox(height: isLandscape ? 16 : 24),
             
             // Clear Disclaimer
-            _buildDisclaimerSection(),
-            const SizedBox(height: 24),
+            _buildDisclaimerSection(isLandscape),
+            SizedBox(height: isLandscape ? 16 : 24),
             
             // Action Button with info
-            _buildActionSection(context),
+            _buildActionSection(context, isLandscape),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeaderSection() {
+  Widget _buildHeaderSection(bool isLandscape) {
     return Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isLandscape ? 16 : 20),
         child: Column(
           children: [
             Icon(
               Icons.hotel,
-              size: 64,
-              color: const Color(0xFF1E88E5).withAlpha(178), // Fixed deprecation
+              size: isLandscape ? 48 : 64,
+              color: const Color(0xFF1E88E5).withAlpha(178),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: isLandscape ? 12 : 16),
             Text(
               'Accommodation Search',
               style: GoogleFonts.inter(
-                fontSize: 20,
+                fontSize: isLandscape ? 18 : 20,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF1E88E5),
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: isLandscape ? 8 : 12),
             Text(
               'Search for hotels, resorts, and apartments through Google Travel with best prices and wide selection.',
               style: GoogleFonts.inter(
                 color: Colors.grey[600],
-                fontSize: 14,
+                fontSize: isLandscape ? 13 : 14,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
-            _buildFeatureRow('Real-time price comparison'),
-            _buildFeatureRow('Hotels, resorts & apartments'),
-            _buildFeatureRow('Free cancellation options'),
-            _buildFeatureRow('Customer reviews & ratings'),
+            SizedBox(height: isLandscape ? 12 : 16),
+            _buildFeatureRow('Real-time price comparison', isLandscape),
+            _buildFeatureRow('Hotels, resorts & apartments', isLandscape),
+            _buildFeatureRow('Free cancellation options', isLandscape),
+            _buildFeatureRow('Customer reviews & ratings', isLandscape),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDisclaimerSection() {
+  Widget _buildDisclaimerSection(bool isLandscape) {
     return Card(
       elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(isLandscape ? 16 : 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.warning_amber, color: Colors.orange[700], size: 20),
+                Icon(Icons.warning_amber, color: Colors.orange[700], size: 18),
                 const SizedBox(width: 8),
-                Text(
-                  'Important Notice',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.orange[700],
+                Expanded(
+                  child: Text(
+                    'Important Notice',
+                    style: GoogleFonts.inter(
+                      fontSize: isLandscape ? 15 : 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.orange[700],
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: isLandscape ? 8 : 12),
             Text(
               'This is a free external link service for your convenience:',
               style: GoogleFonts.inter(
                 color: Colors.grey[700],
-                fontSize: 14,
+                fontSize: isLandscape ? 13 : 14,
               ),
             ),
-            const SizedBox(height: 12),
-            _buildDisclaimerItem('We simply provide a link to Google Travel'),
-            _buildDisclaimerItem('No search or booking happens within this app'),
-            _buildDisclaimerItem('We are not affiliated with Google Travel'),
-            _buildDisclaimerItem('We are not responsible for Google Travel\'s services'),
-            _buildDisclaimerItem('All transactions are between you and Google Travel'),
+            SizedBox(height: isLandscape ? 8 : 12),
+            _buildDisclaimerItem('We simply provide a link to Google Travel', isLandscape),
+            _buildDisclaimerItem('No search or booking happens within this app', isLandscape),
+            _buildDisclaimerItem('We are not affiliated with Google Travel', isLandscape),
+            _buildDisclaimerItem('We are not responsible for Google Travel\'s services', isLandscape),
+            _buildDisclaimerItem('All transactions are between you and Google Travel', isLandscape),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionSection(BuildContext context) {
+  Widget _buildActionSection(BuildContext context, bool isLandscape) {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(isLandscape ? 12 : 16),
           decoration: BoxDecoration(
             color: Colors.grey[50],
             borderRadius: BorderRadius.circular(12),
@@ -169,13 +173,13 @@ class AccommodationScreen extends StatelessWidget {
           ),
           child: Row(
             children: [
-              const Icon(Icons.info_outline, color: Colors.blue, size: 20),
-              const SizedBox(width: 12),
+              const Icon(Icons.info_outline, color: Colors.blue, size: 18),
+              SizedBox(width: isLandscape ? 8 : 12),
               Expanded(
                 child: Text(
                   'You will be redirected to Google Travel website to search and book accommodations',
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: isLandscape ? 12 : 13,
                     color: Colors.grey[700],
                   ),
                 ),
@@ -183,13 +187,13 @@ class AccommodationScreen extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 16),
-        _buildActionButton(context),
+        SizedBox(height: isLandscape ? 12 : 16),
+        _buildActionButton(context, isLandscape),
       ],
     );
   }
 
-  Widget _buildActionButton(BuildContext context) {
+  Widget _buildActionButton(BuildContext context, bool isLandscape) {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -197,7 +201,7 @@ class AccommodationScreen extends StatelessWidget {
         style: ElevatedButton.styleFrom(
           backgroundColor: const Color(0xFF1E88E5),
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: EdgeInsets.symmetric(vertical: isLandscape ? 14 : 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -207,12 +211,16 @@ class AccommodationScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.open_in_new, size: 20),
-            const SizedBox(width: 12),
-            Text(
-              'Search Accommodations on Google Travel',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
+            SizedBox(width: isLandscape ? 8 : 12),
+            Flexible(
+              child: Text(
+                'Search Accommodations on Google Travel',
+                style: GoogleFonts.inter(
+                  fontWeight: FontWeight.w600,
+                  fontSize: isLandscape ? 14 : 16,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.visible,
               ),
             ),
           ],
@@ -221,7 +229,7 @@ class AccommodationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFeatureRow(String text) {
+  Widget _buildFeatureRow(String text, bool isLandscape) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -237,9 +245,10 @@ class AccommodationScreen extends StatelessWidget {
             child: Text(
               text,
               style: GoogleFonts.inter(
-                fontSize: 13,
+                fontSize: isLandscape ? 12 : 13,
                 color: Colors.grey[600],
               ),
+              overflow: TextOverflow.visible,
             ),
           ),
         ],
@@ -247,7 +256,7 @@ class AccommodationScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDisclaimerItem(String text) {
+  Widget _buildDisclaimerItem(String text, bool isLandscape) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
@@ -260,8 +269,9 @@ class AccommodationScreen extends StatelessWidget {
               text,
               style: GoogleFonts.inter(
                 color: Colors.grey[700],
-                fontSize: 13,
+                fontSize: isLandscape ? 12 : 13,
               ),
+              overflow: TextOverflow.visible,
             ),
           ),
         ],

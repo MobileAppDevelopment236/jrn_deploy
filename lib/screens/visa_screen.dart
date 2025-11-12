@@ -6,6 +6,7 @@ import 'dart:typed_data';
 import 'package:jrr_immigration_app/services/supabase_storage_service.dart';
 import 'package:jrr_immigration_app/services/database_service.dart';
 import 'package:jrr_immigration_app/utils/security_utils.dart';
+import 'package:clipboard/clipboard.dart';
 final _emailDateFormatter = DateFormat('MMMM dd, yyyy \'at\' hh:mm a', 'en_IN');
 
 
@@ -413,8 +414,8 @@ const Map<String, int> visaFees = {
 // STEP 1: UPI PAYMENT CONFIGURATION - JRR INTEGRATED SOLUTIONS
 // ===========================================================================
 
-/// UPI Payment Configuration using JRR Integrated Solutions details
-const Map<String, dynamic> upiPaymentConfig = {
+// Replace these with final variables instead of const
+final Map<String, dynamic> upiPaymentConfig = {
   'upiId': 'jeebuanuradha@okicici',
   'name': 'JRR INTEGRATED SOLUTIONS',
   'qrCodeImagePath': 'assets/images/JRRupi_qr_code.png', 
@@ -423,6 +424,29 @@ const Map<String, dynamic> upiPaymentConfig = {
   'bankName': 'State Bank of India',
   'ifscCode': 'SBIN0071202',
   'gpayNumber': '9848612917',
+  
+  'supportedUpiApps': <Map<String, dynamic>>[
+    {
+      'name': 'Google Pay',
+      'package': 'com.google.android.apps.nbu.paisa.user',
+      'scheme': 'tez'
+    },
+    {
+      'name': 'PhonePe',
+      'package': 'com.phonepe.app',
+      'scheme': 'phonepe'
+    },
+    {
+      'name': 'Paytm',
+      'package': 'net.one97.paytm',
+      'scheme': 'paytmmp'
+    },
+    {
+      'name': 'BHIM UPI',
+      'package': 'in.org.npci.upiapp',
+      'scheme': 'upi'
+    },    
+  ]
 };
 
 // ===========================================================================
@@ -440,7 +464,7 @@ class _VisaScreenState extends State<VisaScreen> {
   int _currentStep = 0;
   //final int _totalSteps = 5; // NEW: Changed from 4 to 5
   bool _isSubmitting = false;
-  
+  bool _showManualInstructions = false;
 
   // Document Upload Variables
   final List<UploadedDocument> _uploadedDocuments = [];
@@ -547,15 +571,25 @@ class _VisaScreenState extends State<VisaScreen> {
   String? _hospitalError;
   String? _treatmentError;
 
- @override
+ 
+@override
 void initState() {
   super.initState();
   _applicationId = _generateApplicationId();
+  // Initialize payment state
+  _selectedPaymentMethod = null;
+  _paymentCompleted = false;
+  _paymentReceiptUrl = null;
+  _paymentError = null;
+  _isProcessingPayment = false;
+  
   // DELAY heavy operations to improve initial load
   WidgetsBinding.instance.addPostFrameCallback((_) {
-    _updatePassengerControllers();
-    _testStorageConnection();
-    _logMemoryUsage('App initialized');
+    if (mounted) { // ADD THIS CHECK
+      _updatePassengerControllers();
+      _testStorageConnection();
+      _logMemoryUsage('App initialized');
+    }
   });
 }
 
@@ -956,21 +990,20 @@ void _logMemoryUsage(String context) {
 // STEP 3: HELPER METHODS FOR UPI PAYMENT
 // ===========================================================================
 
-// Helper method for UPI details display
 Widget _buildUpiDetailRow(String label, String value) {
   return Padding(
-    padding: const EdgeInsets.symmetric(vertical: 4),
+    padding: const EdgeInsets.symmetric(vertical: 2), // Reduced padding
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SizedBox(
-          width: 70,
+          width: 60, // Reduced width
           child: Text(
             label,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-              fontSize: 12,
+              color: Colors.grey[700]!,
+              fontSize: 11, // Smaller font
             ),
           ),
         ),
@@ -978,8 +1011,8 @@ Widget _buildUpiDetailRow(String label, String value) {
           child: Text(
             value,
             style: TextStyle(
-              color: Colors.grey[800],
-              fontSize: 12,
+              color: Colors.grey[800]!,
+              fontSize: 11, // Smaller font
             ),
           ),
         ),
@@ -987,18 +1020,189 @@ Widget _buildUpiDetailRow(String label, String value) {
     ),
   );
 }
+// Enhanced Cross-Platform Copy to Clipboard
+Future<void> _copyToClipboard(String text) async {
+  try {
+    bool copySuccess = false;
+    //String platformMessage = '';
+    
+    // Try to copy to clipboard
+    try {
+      await FlutterClipboard.copy(text);
+      copySuccess = true;
+      //platformMessage = 'Copied to clipboard!';
+    } catch (e) {
+      debugPrint('Clipboard copy failed: $e');
+      copySuccess = false;
+      //platformMessage = 'Please manually copy the text below';
+    }
+    
+    if (!mounted) return;
+    
+    // Show appropriate message based on platform and success
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Success message
+            if (copySuccess) ...[
+              const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'UPI ID Copied!',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Paste it in your UPI app to make payment',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+            
+            // Fallback message for failed copy
+            if (!copySuccess) ...[
+              const Row(
+                children: [
+                  Icon(Icons.content_copy, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text(
+                    'Copy UPI ID Manually',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.yellow,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Select and copy the text above',
+                style: TextStyle(fontSize: 12),
+              ),
+            ],
+          ],
+        ),
+        backgroundColor: copySuccess ? Colors.green : Colors.orange,
+        duration: const Duration(seconds: 5),
+        action: copySuccess 
+            ? SnackBarAction(
+                label: 'OK',
+                textColor: Colors.white,
+                onPressed: () {},
+              )
+            : SnackBarAction(
+                label: 'RETRY COPY',
+                textColor: Colors.white,
+                onPressed: () => _copyToClipboard(text),
+              ),
+      ),
+    );
+    
+    // For web: Additional visual feedback
+    if (!copySuccess) {
+      // Show a dialog with selectable text for web users
+      _showCopyFallbackDialog(text);
+    }
+    
+  } catch (e) {
+    debugPrint('Error in copy to clipboard: $e');
+    if (!mounted) return;
+    
+    // Ultimate fallback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('UPI ID:', style: TextStyle(fontWeight: FontWeight.w600)),
+            Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+            const Text('Please manually copy this UPI ID'),
+          ],
+        ),
+        backgroundColor: Colors.blue,
+        duration: const Duration(seconds: 6),
+      ),
+    );
+  }
+}
 
-// Copy to clipboard functionality
-void _copyToClipboard(String text) {
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: Text('UPI ID copied to clipboard: $text'),
-      backgroundColor: Colors.green,
-      duration: const Duration(seconds: 2),
+// Fallback dialog for web or when clipboard fails
+void _showCopyFallbackDialog(String text) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.content_copy, color: Colors.blue),
+          SizedBox(width: 8),
+          Text('Copy UPI ID'),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Select and copy the UPI ID below:'),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: SelectableText(
+              text,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Tip: Double-tap to select, then choose "Copy"',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            _copyToClipboard(text); // Retry
+          },
+          child: const Text('Try Copy Again'),
+        ),
+      ],
     ),
   );
 }
-
 // ===========================================================================
 // END OF STEP 3
 // ===========================================================================
@@ -1007,8 +1211,11 @@ void _copyToClipboard(String text) {
 // ===========================================================================
 // SIMPLIFIED PAYMENT METHODS
 // ===========================================================================
+Future<void> _uploadPaymentReceipt() async {
+  _applicationId ??= _generateApplicationId();
 
-void _uploadPaymentReceipt() async {
+  final localContext = context;
+  
   setState(() {
     _isProcessingPayment = true;
     _paymentError = null;
@@ -1019,87 +1226,117 @@ void _uploadPaymentReceipt() async {
       type: FileType.custom,
       allowedExtensions: allowedFileExtensions,
       allowMultiple: false,
+      withData: true,
     );
 
     if (result != null && result.files.isNotEmpty) {
       final file = result.files.first;
       
-      // DEBUG: Print file info for troubleshooting
-      debugPrint('📄 Selected file: ${file.name}, size: ${file.size}, bytes: ${file.bytes?.length}');
-      
-      // ENHANCED FILE VALIDATION
-      if (file.size > maxFileSize) {
-        setState(() {
-          _paymentError = 'File too large (${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB). Maximum: ${maxFileSize ~/ (1024 * 1024)}MB';
-          _isProcessingPayment = false;
-        });
-        return;
-      }
-
-      // VALIDATE FILE TYPE - MORE FLEXIBLE
-      final fileExtension = _getFileExtension(file.name).toLowerCase();
-      debugPrint('🔍 File extension: $fileExtension');
-      
-      if (!allowedFileExtensions.contains(fileExtension)) {
-        setState(() {
-          _paymentError = 'File type "$fileExtension" not supported.\n'
-              'Supported formats: PDF, JPG, PNG, DOC, DOCX, HEIC, WEBP, BMP, TIFF';
-          _isProcessingPayment = false;
-        });
-        return;
-      }
-
-      // ADDITIONAL SAFETY CHECK: Ensure file has bytes
       if (file.bytes == null || file.bytes!.isEmpty) {
+        if (!mounted) return;
         setState(() {
-          _paymentError = 'File is empty or cannot be read. Please try selecting the file again.';
           _isProcessingPayment = false;
+          _paymentError = 'File is empty. Please try again.';
         });
         return;
       }
 
-      // ACTUAL UPLOAD TO SUPABASE
-      final receiptUrl = await SupabaseStorageService.uploadDocument(
-        fileName: 'payment_receipt_${DateTime.now().millisecondsSinceEpoch}.$fileExtension',
-        fileBytes: file.bytes!,
-        applicationId: _applicationId!,
-      );
+      if (file.size > maxFileSize) {
+        if (!mounted) return;
+        setState(() {
+          _isProcessingPayment = false;
+          _paymentError = 'File too large: ${(file.size / (1024 * 1024)).toStringAsFixed(2)}MB. '
+              'Maximum: ${maxFileSize ~/ (1024 * 1024)}MB';
+        });
+        return;
+      }
 
-      setState(() {
-        _isProcessingPayment = false;
-        _paymentCompleted = true;
-        _paymentReceiptUrl = receiptUrl;
-      });
+      final fileExtension = _getFileExtension(file.name);
+      
+      if (!allowedFileExtensions.contains(fileExtension.toLowerCase())) {
+        if (!mounted) return;
+        setState(() {
+          _isProcessingPayment = false;
+          _paymentError = 'File type "$fileExtension" not supported.\n'
+              'Supported: ${allowedFileExtensions.join(', ').toUpperCase()}';
+        });
+        return;
+      }
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment receipt uploaded successfully!'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      try {
+        // UPLOAD TO SUPABASE STORAGE
+        final receiptUrl = await SupabaseStorageService.uploadPaymentReceipt(
+          fileName: 'receipt_${_applicationId}_${DateTime.now().millisecondsSinceEpoch}.$fileExtension',
+          fileBytes: file.bytes!,
+          applicationId: _applicationId!,
+        ).timeout(const Duration(seconds: 30));
+
+        if (!mounted) return;
+        setState(() {
+          _isProcessingPayment = false;
+          _paymentCompleted = true;
+          _paymentReceiptUrl = receiptUrl;
+        });
+
+        // Also save to database
+        await _savePaymentReceiptToDatabase(receiptUrl, file.name, file.size);
+
+        ScaffoldMessenger.of(localContext).showSnackBar(
+          SnackBar(
+            content: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('✅ Payment receipt uploaded!',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('File: ${file.name}',
+                    style: const TextStyle(fontSize: 12)),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+
+      } catch (uploadError) {
+        if (!mounted) return;
+        setState(() {
+          _isProcessingPayment = false;
+          _paymentError = _getUserFriendlyErrorMessage(uploadError);
+        });
+      }
+      
     } else {
+      if (!mounted) return;
       setState(() {
         _isProcessingPayment = false;
       });
     }
   } catch (e) {
-    debugPrint('💥 Payment receipt upload error: $e');
+    if (!mounted) return;
     setState(() {
       _isProcessingPayment = false;
-      _paymentError = 'Error uploading receipt: ${e.toString()}';
+      _paymentError = 'Error selecting file: ${e.toString()}';
     });
-    
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Upload failed: ${e.toString()}'),
-        backgroundColor: Colors.red,
-      ),
-    );
   }
 }
 
+// Add this method to save receipt to database
+Future<void> _savePaymentReceiptToDatabase(String receiptUrl, String fileName, int fileSize) async {
+  try {
+    // You'll need to modify your DatabaseService to handle payment receipts
+    await DatabaseService.savePaymentReceipt(
+      applicationId: _applicationId!,
+      receiptUrl: receiptUrl,
+      fileName: fileName,
+      fileSize: fileSize,
+      uploadDate: DateTime.now(),
+    );
+  } catch (e) {
+    debugPrint('Warning: Failed to save payment receipt to database: $e');
+    // Don't block the user if database save fails
+  }
+}
 // ===========================================================================
 // END OF SIMPLIFIED PAYMENT METHODS
 // ===========================================================================
@@ -1107,20 +1344,56 @@ void _uploadPaymentReceipt() async {
 // Add this helper method if not already present, or enhance it:
 String _getFileExtension(String fileName) {
   try {
+    if (fileName.isEmpty) return 'unknown';
+    
     // Handle files with multiple dots and special cases
     final parts = fileName.split('.');
     if (parts.length > 1) {
-      String extension = parts.last.toLowerCase();
+      String extension = parts.last.toLowerCase().trim();
       
-      // Handle special cases
-      if (extension == 'jpeg') return 'jpg';
-      if (extension == 'tiff') return 'tif';
+      // Handle special cases and aliases
+      final extensionMap = {
+        'jpeg': 'jpg',
+        'tiff': 'tif', 
+        'heic': 'heic', // iPhone photos
+        'heif': 'heif', // High Efficiency Image
+      };
       
-      return extension;
+      // Return mapped extension or original
+      return extensionMap[extension] ?? extension;
     }
+    
+    // Check for files without extensions but with known patterns
+    if (fileName.toLowerCase().contains('heic')) return 'heic';
+    if (fileName.toLowerCase().contains('heif')) return 'heif';
+    
     return 'unknown';
   } catch (e) {
+    debugPrint('❌ ERROR in _getFileExtension: $e');
     return 'unknown';
+  }
+}
+
+// ENSURE this method exists and is comprehensive:
+String _getUserFriendlyErrorMessage(dynamic error) {
+  final errorString = error.toString().toLowerCase();
+  
+  if (errorString.contains('permission') || errorString.contains('access')) {
+    return 'File access denied. Please check app permissions.';
+  } else if (errorString.contains('network') || errorString.contains('internet') || errorString.contains('socket')) {
+    return 'Network error. Please check your internet connection.';
+  } else if (errorString.contains('timeout')) {
+    return 'Upload timeout. Please try again.';
+  } else if (errorString.contains('format') || errorString.contains('type')) {
+    return 'File format not supported. Please try a different file.';
+  } else if (errorString.contains('size') || errorString.contains('large')) {
+    return 'File too large. Please compress or choose a smaller file.';
+  } else if (errorString.contains('heic') || errorString.contains('heif')) {
+    return 'HEIC/HEIF files need conversion. Use your phone\'s editor to convert to JPG.';
+  } else if (errorString.contains('bucket') || errorString.contains('storage')) {
+    return 'Storage service temporarily unavailable. Please try again.';
+  } else {
+    return 'Please try again. If problem persists, try a different file or contact support.';
   }
 }
 
@@ -1273,33 +1546,120 @@ String _getFileExtension(String fileName) {
     return _travelDateError == null && _returnDateError == null && _otherCountryError == null;
   }
 
-  // NEW: Step 4 Validation (Payment & Documents)
-bool _validateStep4() {
-  // Validate payment method selection
+  bool _validateStep4() {
   if (_selectedPaymentMethod == null) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Please select a payment method'),
+        content: Text('Please select a payment method to continue'),
         backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
       ),
     );
     return false;
   }
 
-  // For PayNow, validate payment is completed
-  if (_selectedPaymentMethod == 'payNow' && !_paymentCompleted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please complete the payment process'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return false;
+  // For PayNow, validate payment is completed AND receipt is uploaded
+  if (_selectedPaymentMethod == 'payNow') {
+    if (!_paymentCompleted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please complete the UPI payment first. Use the "Paid?" button if you have already paid.'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return false;
+    }
+    
+    if (_paymentReceiptUrl == null || _paymentReceiptUrl!.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please upload your payment receipt screenshot to complete application'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+      return false;
+    }
   }
 
   return true;
 }
 
+// Add this method to handle payment completion
+void _markPaymentAsCompleted() {
+  setState(() {
+    _paymentCompleted = true;
+    // Show success message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Payment marked as completed! You can now upload receipt.'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  });
+}
+
+Widget _buildUpiAppButton(Map<String, dynamic> app) {
+  return SizedBox(
+    width: 65,
+    height: 75,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        GestureDetector(
+          onTap: () => _openUpiApp(app),
+          child: Card(
+            elevation: 2,
+            child: Container(
+              width: 55,
+              height: 45,
+              padding: const EdgeInsets.all(4),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.payment, size: 16, color: Color(0xFF388E3C)),
+                  const SizedBox(height: 2),
+                  Text(
+                    app['name'],
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF2E7D32),
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        SizedBox(
+          height: 16,
+          child: TextButton(
+            onPressed: _markPaymentAsCompleted,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.all(0),
+              minimumSize: Size.zero,
+            ),
+            child: const Text(
+              'Paid?',
+              style: TextStyle(
+                fontSize: 6,
+                color: Color(0xFF1976D2),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
   // Document Upload Methods
   Future<void> _pickDocuments() async {
     try {
@@ -1450,6 +1810,82 @@ void _removeStep1Document(int index) {
 }
 
   // Document Upload UI
+  // ENHANCED VERSION WITH BETTER ERROR HANDLING
+Widget _buildDocumentRequirementsBox() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: Colors.blue[50],
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.blue.shade200),
+    ),
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.of(context).size.width - 32, // Account for padding
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Title Row
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Document Requirements for ${_selectedVisaType.name}',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.blue[700],
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        
+        const SizedBox(height: 8),
+        
+        // Requirements List
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return SizedBox(
+              width: constraints.maxWidth,
+              child: Text(
+                _getVisaDocumentRequirements(),
+                style: TextStyle(
+                  color: Colors.blue[800],
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+                softWrap: true,
+                overflow: TextOverflow.fade,
+              ),
+            );
+          },
+        ),
+        
+        const SizedBox(height: 8),
+        
+        // Note
+        Text(
+          'You can upload these documents now using the upload section below, or in the next step.',
+          style: TextStyle(
+            color: Colors.blue[700],
+            fontSize: 11,
+            fontStyle: FontStyle.italic,
+            height: 1.3,
+          ),
+          softWrap: true,
+        ),
+      ],
+    ),
+  );
+}
   Widget _buildDocumentUploadSection() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1679,335 +2115,440 @@ Wrap(
 }
   // UI Components
   Widget _buildStep1() {
-    return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(), // FIX: Prevent scroll jumps
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Section
-          Text(
-            'Personal Information',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Enter your personal details and select visa type.',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 16),
+  final double screenWidth = MediaQuery.of(context).size.width;
+  final bool isWideScreen = screenWidth > 600;
+  final bool isVeryWideScreen = screenWidth > 800;
 
-          // SIMPLIFIED Visa Type Dropdown
-          DropdownButtonFormField<VisaType>(
-            initialValue: _selectedVisaType,
-            decoration: const InputDecoration(
-              labelText: 'Visa Type *',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.assignment),
-              filled: true,
-              fillColor: Colors.white,
-            ),
-            dropdownColor: Colors.white,
-            items: kVisaTypes.map((visaType) {
-              return DropdownMenuItem<VisaType>(
-                value: visaType,
-                child: Text(
-                  visaType.name,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              );
-            }).toList(),
-            onChanged: (val) {
-              if (val != null) {
-                setState(() {
-                  _selectedVisaType = val;
-                  _resetPassengerCountsForVisaType();
-                  _passengersError = _validatePassengers();
-                  if (val.name != 'Other') {
-                    _otherVisaTypeController.clear();
-                    _otherVisaTypeError = null;
-                  }
-                });
-              }
-            },
+  return SingleChildScrollView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header Section
+        Text(
+          'Personal Information',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
           ),
-          const SizedBox(height: 16),
-
-          // ADD THIS: Visa-specific document requirements note
-Container(
-  width: double.infinity,
-  padding: const EdgeInsets.all(12),
-  decoration: BoxDecoration(
-    color: Colors.blue[50],
-    borderRadius: BorderRadius.circular(8),
-    border: Border.all(color: Colors.blue.shade200),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Icon(Icons.info_outline, size: 18, color: Colors.blue[700]),
-          const SizedBox(width: 8),
-          Text(
-            'Document Requirements for ${_selectedVisaType.name}',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.blue[700],
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 8),
-      Text(
-        _getVisaDocumentRequirements(),
-        style: TextStyle(
-          color: Colors.blue[800],
-          fontSize: 12,
         ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-  'You can upload these documents now using the upload section below, or in the next step.',
-  style: TextStyle(
-    color: Colors.blue[700],
-    fontSize: 11,
-    fontStyle: FontStyle.italic,
-  ),
-),
-    ],
-  ),
-),
-const SizedBox(height: 16),
-// ADD THIS: Step 1 Document Upload Section
-_buildStep1DocumentUploadSection(),
-const SizedBox(height: 16),
-
-          // Custom Visa Type Input Field
-          if (_selectedVisaType.name == 'Other') ...[
-            TextFormField(
-              controller: _otherVisaTypeController,
-              decoration: InputDecoration(
-                labelText: 'Specify Your Visa Type *',
-                hintText: 'e.g., Cultural Exchange, Sports, etc.',
-                border: const OutlineInputBorder(),
-                prefixIcon: const Icon(Icons.edit),
-                errorText: _otherVisaTypeError,
-              ),
-              onChanged: (v) => setState(() => _otherVisaTypeError = _validateOtherVisaType(v)),
-            ),
-            const SizedBox(height: 16),
-          ],
-
-          // Visa Specific Information Sections
-          _buildVisaSpecificFields(),
-
-          // Personal Information Fields
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _firstNameController,
-                  decoration: InputDecoration(
-                    labelText: 'First Name *',
-                    hintText: 'As per passport',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.person),
-                    errorText: _firstNameError,
-                  ),
-                  onChanged: (v) => setState(() => _firstNameError = _validateName(v, 'First name')),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _lastNameController,
-                  decoration: InputDecoration(
-                    labelText: 'Last Name *',
-                    hintText: 'As per passport',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.person),
-                    errorText: _lastNameError,
-                  ),
-                  onChanged: (v) => setState(() => _lastNameError = _validateName(v, 'Last name')),
-                ),
-              ),
-            ],
+        const SizedBox(height: 8),
+        Text(
+          'Enter your personal details and select visa type.',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 14,
           ),
-          const SizedBox(height: 12),
+        ),
+        const SizedBox(height: 16),
 
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Email Address *',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.email),
-                    errorText: _emailError,
-                  ),
-                  keyboardType: TextInputType.emailAddress,
-                  onChanged: (v) => setState(() => _emailError = _validateEmail(v)),
+        // Visa Type Dropdown
+        DropdownButtonFormField<VisaType>(
+          initialValue: _selectedVisaType,
+          decoration: const InputDecoration(
+            labelText: 'Visa Type *',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.assignment),
+            filled: true,
+            fillColor: Colors.white,
+          ),
+          dropdownColor: Colors.white,
+          items: kVisaTypes.map((visaType) {
+            return DropdownMenuItem<VisaType>(
+              value: visaType,
+              child: Text(
+                visaType.name,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: _phoneController,
-                  decoration: InputDecoration(
-                    labelText: 'Phone Number *',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.phone),
-                    errorText: _phoneError,
-                  ),
-                  keyboardType: TextInputType.phone,
-                  onChanged: (v) => setState(() => _phoneError = _validatePhone(v)),
-                ),
-              ),
-            ],
+            );
+          }).toList(),
+          onChanged: (val) {
+            if (val != null) {
+              setState(() {
+                _selectedVisaType = val;
+                _resetPassengerCountsForVisaType();
+                _passengersError = _validatePassengers();
+                if (val.name != 'Other') {
+                  _otherVisaTypeController.clear();
+                  _otherVisaTypeError = null;
+                }
+              });
+            }
+          },
+        ),
+        const SizedBox(height: 16),
+
+        // Visa-specific document requirements note
+        _buildDocumentRequirementsBox(),
+        const SizedBox(height: 16),
+
+        _buildStep1DocumentUploadSection(),
+        const SizedBox(height: 16),
+
+        // Custom Visa Type Input Field
+        if (_selectedVisaType.name == 'Other') ...[
+          TextFormField(
+            controller: _otherVisaTypeController,
+            decoration: InputDecoration(
+              labelText: 'Specify Your Visa Type *',
+              hintText: 'e.g., Cultural Exchange, Sports, etc.',
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.edit),
+              errorText: _otherVisaTypeError,
+            ),
+            onChanged: (v) => setState(() => _otherVisaTypeError = _validateOtherVisaType(v)),
           ),
           const SizedBox(height: 16),
+        ],
 
-          // Previous Refusal Field - FIXED
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Previous Visa Refusal',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
-                ),
+        // Visa Specific Information Sections
+        _buildVisaSpecificFields(),
+
+        // PERSONAL INFORMATION FIELDS - RESPONSIVE VERSION
+        if (isVeryWideScreen) 
+          _buildPersonalInfoWide4Column()
+        else if (isWideScreen) 
+          _buildPersonalInfoWide2Column()
+        else 
+          _buildPersonalInfoNarrow(),
+
+        const SizedBox(height: 16),
+
+        // Previous Refusal Field
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Previous Visa Refusal',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[800],
               ),
-              const SizedBox(height: 8),
-              Text(
-                'Have you had any previous visa refusals? (Optional)',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 14,
-                ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Have you had any previous visa refusals? (Optional)',
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
               ),
-              const SizedBox(height: 12),
-              
-              Container(
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  _previousRefusal = 'no';
-                  _previousRefusalController.clear();
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: _previousRefusal == 'no' ? Colors.blue[50] : Colors.transparent,
-                  border: Border(right: BorderSide(color: Colors.grey.shade300)),
-                ),
-                child: Container( // ← ADD THIS LINE
-  constraints: const BoxConstraints(maxWidth: 100), // ← ADD THIS LINE
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Radio<String>(
-                      value: 'no',
-                      groupValue: _previousRefusal,
-                      onChanged: (String? value) {
+            ),
+            const SizedBox(height: 12),
+            
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
                         setState(() {
-                          _previousRefusal = value;
+                          _previousRefusal = 'no';
                           _previousRefusalController.clear();
                         });
                       },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: _previousRefusal == 'no' ? Colors.blue[50] : Colors.transparent,
+                          border: Border(right: BorderSide(color: Colors.grey.shade300)),
+                        ),
+                        child: Container(
+                          constraints: const BoxConstraints(maxWidth: 100),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Radio<String>(
+                                value: 'no',
+                                groupValue: _previousRefusal,
+                                onChanged: (String? value) {
+                                  setState(() {
+                                    _previousRefusal = value;
+                                    _previousRefusalController.clear();
+                                  });
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              const Text('No'),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    const Text('No'),
-                  ],
-                ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: InkWell(
-              onTap: () {
-                setState(() {
-                  _previousRefusal = 'yes';
-                });
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                decoration: BoxDecoration(
-                  color: _previousRefusal == 'yes' ? Colors.blue[50] : Colors.transparent,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Radio<String>(
-                      value: 'yes',
-                      groupValue: _previousRefusal,
-                      onChanged: (String? value) {
+                  ),
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
                         setState(() {
-                          _previousRefusal = value;
+                          _previousRefusal = 'yes';
                         });
                       },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: _previousRefusal == 'yes' ? Colors.blue[50] : Colors.transparent,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Radio<String>(
+                              value: 'yes',
+                              groupValue: _previousRefusal,
+                              onChanged: (String? value) {
+                                setState(() {
+                                  _previousRefusal = value;
+                                });
+                              },
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('Yes'),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 8),
-                    const Text('Yes'),
-                  ],
+                  ),
+                ],
+              ),
+            ),
+
+            if (_previousRefusal == 'yes') ...[
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _previousRefusalController,
+                maxLines: 3,
+                maxLength: 120,
+                decoration: const InputDecoration(
+                  labelText: 'Please provide details of previous refusal',
+                  hintText: 'Country, visa type, date, and reason if known (max 120 characters)...',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
                 ),
               ),
+            ],
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // Passenger Type Selector
+        _buildPassengerTypeSelector(),
+      ],
+    ),
+  );
+}
+ // PERSONAL INFO LAYOUT METHODS FOR DIFFERENT SCREEN SIZES
+
+// For very wide screens (tablets/desktop) - 4 fields in 2 rows
+Widget _buildPersonalInfoWide4Column() {
+  return Column(
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: _firstNameController,
+              decoration: InputDecoration(
+                labelText: 'First Name *',
+                hintText: 'As per passport',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person),
+                errorText: _firstNameError,
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _firstNameError = _validateName(v, 'First name')),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextFormField(
+              controller: _lastNameController,
+              decoration: InputDecoration(
+                labelText: 'Last Name *',
+                hintText: 'As per passport',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person),
+                errorText: _lastNameError,
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _lastNameError = _validateName(v, 'Last name')),
             ),
           ),
         ],
       ),
-    ),
-
-              if (_previousRefusal == 'yes') ...[
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _previousRefusalController,
-                  maxLines: 3,
-                  maxLength: 120, // Fixed to 120 characters as requested
-                  decoration: const InputDecoration(
-                    labelText: 'Please provide details of previous refusal',
-                    hintText: 'Country, visa type, date, and reason if known (max 120 characters)...',
-                    border: OutlineInputBorder(),
-                    alignLabelWithHint: true,
-                  ),
-                ),
-              ],
-            ],
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: 'Email Address *',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.email),
+                errorText: _emailError,
+                isDense: true,
+              ),
+              keyboardType: TextInputType.emailAddress,
+              onChanged: (v) => setState(() => _emailError = _validateEmail(v)),
+            ),
           ),
-          const SizedBox(height: 16),
-
-          // Passenger Type Selector
-          _buildPassengerTypeSelector(),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextFormField(
+              controller: _phoneController,
+              decoration: InputDecoration(
+                labelText: 'Phone Number *',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.phone),
+                errorText: _phoneError,
+                isDense: true,
+              ),
+              keyboardType: TextInputType.phone,
+              onChanged: (v) => setState(() => _phoneError = _validatePhone(v)),
+            ),
+          ),
         ],
       ),
-    );
-  }
+    ],
+  );
+}
+
+// For wide screens (landscape/tablet) - 2 fields side by side
+Widget _buildPersonalInfoWide2Column() {
+  return Column(
+    children: [
+      Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: _firstNameController,
+              decoration: InputDecoration(
+                labelText: 'First Name *',
+                hintText: 'As per passport',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person),
+                errorText: _firstNameError,
+              ),
+              onChanged: (v) => setState(() => _firstNameError = _validateName(v, 'First name')),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextFormField(
+              controller: _lastNameController,
+              decoration: InputDecoration(
+                labelText: 'Last Name *',
+                hintText: 'As per passport',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.person),
+                errorText: _lastNameError,
+              ),
+              onChanged: (v) => setState(() => _lastNameError = _validateName(v, 'Last name')),
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 12),
+      Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: _emailController,
+              decoration: InputDecoration(
+                labelText: 'Email Address *',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.email),
+                errorText: _emailError,
+              ),
+              keyboardType: TextInputType.emailAddress,
+              onChanged: (v) => setState(() => _emailError = _validateEmail(v)),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextFormField(
+              controller: _phoneController,
+              decoration: InputDecoration(
+                labelText: 'Phone Number *',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.phone),
+                errorText: _phoneError,
+              ),
+              keyboardType: TextInputType.phone,
+              onChanged: (v) => setState(() => _phoneError = _validatePhone(v)),
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+}
+
+// For narrow screens (mobile portrait) - all fields stacked
+Widget _buildPersonalInfoNarrow() {
+  return Column(
+    children: [
+      TextFormField(
+        controller: _firstNameController,
+        decoration: InputDecoration(
+          labelText: 'First Name *',
+          hintText: 'As per passport',
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.person),
+          errorText: _firstNameError,
+        ),
+        onChanged: (v) => setState(() => _firstNameError = _validateName(v, 'First name')),
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        controller: _lastNameController,
+        decoration: InputDecoration(
+          labelText: 'Last Name *',
+          hintText: 'As per passport',
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.person),
+          errorText: _lastNameError,
+        ),
+        onChanged: (v) => setState(() => _lastNameError = _validateName(v, 'Last name')),
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        controller: _emailController,
+        decoration: InputDecoration(
+          labelText: 'Email Address *',
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.email),
+          errorText: _emailError,
+        ),
+        keyboardType: TextInputType.emailAddress,
+        onChanged: (v) => setState(() => _emailError = _validateEmail(v)),
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        controller: _phoneController,
+        decoration: InputDecoration(
+          labelText: 'Phone Number *',
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.phone),
+          errorText: _phoneError,
+        ),
+        keyboardType: TextInputType.phone,
+        onChanged: (v) => setState(() => _phoneError = _validatePhone(v)),
+      ),
+    ],
+  );
+}
 
   Widget _buildStep2() {
   return SingleChildScrollView(
-    physics: const ClampingScrollPhysics(), // FIX: Prevent scroll jumps
+    physics: const AlwaysScrollableScrollPhysics(), // CHANGED: Enable proper scrolling
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2073,7 +2614,7 @@ const SizedBox(height: 16),
         : 0;
 
     return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(), // FIX: Prevent scroll jumps
+      physics: const AlwaysScrollableScrollPhysics(), // CHANGED: Enable proper scrolling
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2145,39 +2686,118 @@ const SizedBox(height: 16),
           ),
           const SizedBox(height: 16),
 
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: TextEditingController(text: _travelDate != null ? DateFormat('dd/MM/yyyy').format(_travelDate!) : ''),
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'Travel Date *',
-                    hintText: 'Select date',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.flight_takeoff),
-                    errorText: _travelDateError,
-                  ),
-                  onTap: () => _selectDate('travel'),
-                ),
+          // TRAVEL DATES - RESPONSIVE VERSION
+LayoutBuilder(
+  builder: (context, constraints) {
+    final bool isWideScreen = constraints.maxWidth > 600;
+    final bool isVeryWideScreen = constraints.maxWidth > 800;
+    
+    if (isVeryWideScreen) {
+      // Very wide screens - compact layout
+      return Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: TextEditingController(text: _travelDate != null ? DateFormat('dd/MM/yyyy').format(_travelDate!) : ''),
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Travel Date *',
+                hintText: 'Select date',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.flight_takeoff),
+                errorText: _travelDateError,
+                isDense: true,
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: TextEditingController(text: _returnDate != null ? DateFormat('dd/MM/yyyy').format(_returnDate!) : ''),
-                  readOnly: true,
-                  decoration: InputDecoration(
-                    labelText: 'Return Date *',
-                    hintText: 'Select date',
-                    border: const OutlineInputBorder(),
-                    prefixIcon: const Icon(Icons.flight_land),
-                    errorText: _returnDateError,
-                  ),
-                  onTap: () => _selectDate('return'),
-                ),
-              ),
-            ],
+              onTap: () => _selectDate('travel'),
+            ),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextFormField(
+              controller: TextEditingController(text: _returnDate != null ? DateFormat('dd/MM/yyyy').format(_returnDate!) : ''),
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Return Date *',
+                hintText: 'Select date',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.flight_land),
+                errorText: _returnDateError,
+                isDense: true,
+              ),
+              onTap: () => _selectDate('return'),
+            ),
+          ),
+        ],
+      );
+    } else if (isWideScreen) {
+      // Wide screens - standard side by side
+      return Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: TextEditingController(text: _travelDate != null ? DateFormat('dd/MM/yyyy').format(_travelDate!) : ''),
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Travel Date *',
+                hintText: 'Select date',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.flight_takeoff),
+                errorText: _travelDateError,
+              ),
+              onTap: () => _selectDate('travel'),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: TextFormField(
+              controller: TextEditingController(text: _returnDate != null ? DateFormat('dd/MM/yyyy').format(_returnDate!) : ''),
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Return Date *',
+                hintText: 'Select date',
+                border: const OutlineInputBorder(),
+                prefixIcon: const Icon(Icons.flight_land),
+                errorText: _returnDateError,
+              ),
+              onTap: () => _selectDate('return'),
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Narrow screens - stacked vertically
+      return Column(
+        children: [
+          TextFormField(
+            controller: TextEditingController(text: _travelDate != null ? DateFormat('dd/MM/yyyy').format(_travelDate!) : ''),
+            readOnly: true,
+            decoration: InputDecoration(
+              labelText: 'Travel Date *',
+              hintText: 'Select date',
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.flight_takeoff),
+              errorText: _travelDateError,
+            ),
+            onTap: () => _selectDate('travel'),
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            controller: TextEditingController(text: _returnDate != null ? DateFormat('dd/MM/yyyy').format(_returnDate!) : ''),
+            readOnly: true,
+            decoration: InputDecoration(
+              labelText: 'Return Date *',
+              hintText: 'Select date',
+              border: const OutlineInputBorder(),
+              prefixIcon: const Icon(Icons.flight_land),
+              errorText: _returnDateError,
+            ),
+            onTap: () => _selectDate('return'),
+          ),
+        ],
+      );
+    }
+  },
+),
           const SizedBox(height: 16),
 
           Container(
@@ -2222,141 +2842,444 @@ const SizedBox(height: 16),
   // NEW: Step 4 - Payment & Documents
 Widget _buildStep4() {
   return SingleChildScrollView(
-    physics: const ClampingScrollPhysics(), // FIX: Prevent scroll jumps
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Payment & Documents',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[800],
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Complete payment and upload required documents.',
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Service Fee Display
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.blue),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Service Fee',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.blue[800],
-                    ),
-                  ),
-                  Text(
-                    'Total amount to be paid',
-                    style: TextStyle(
-                      color: Colors.blue[600],
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-              Text(
-                '₹$_calculatedFee INR',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E88E5),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        // Payment Method Selection
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Payment Method *',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
+    physics: const AlwaysScrollableScrollPhysics(),
+    child: ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: MediaQuery.of(context).size.height - 200,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Payment & Documents',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[800],
             ),
-            const SizedBox(height: 12),
-            Row(
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Complete payment and upload required documents.',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // REPLACE the entire Service Fee Container with this:
+LayoutBuilder(
+  builder: (context, constraints) {
+    final bool isWideScreen = constraints.maxWidth > 600;
+    
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue),
+      ),
+      child: isWideScreen 
+          ? Row( // Horizontal layout for wide screens
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-  child: ListTile(
-    title: const Text('Pay Now'),
-    subtitle: const Text('Complete payment immediately'),
-    leading: Radio<String>(
-      value: 'payNow',
-      groupValue: _selectedPaymentMethod,
-      onChanged: (String? value) {
-        setState(() {
-          _selectedPaymentMethod = value;
-          _paymentCompleted = false; // Reset payment completion when switching to Pay Now
-          _paymentReceiptUrl = null; // Reset receipt URL
-        });
-      },
-    ),
-  ),
-),
-                Expanded(
-                  child: ListTile(
-                    title: const Text('Pay Later'),
-                    subtitle: const Text('Pay at office or later online'),
-                    leading: Radio<String>(
-                      value: 'payLater',
-                      groupValue: _selectedPaymentMethod,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _selectedPaymentMethod = value;
-                          _paymentCompleted = false; // Auto-complete for pay later
-                        });
-                      },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Service Fee',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.blue[800],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Total amount to be paid',
+                        style: TextStyle(
+                          color: Colors.blue[600],
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '₹$_calculatedFee INR',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E88E5),
+                  ),
+                ),
+              ],
+            )
+          : Column( // Vertical layout for narrow screens
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Service Fee',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.blue[800],
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Total amount to be paid',
+                  style: TextStyle(
+                    color: Colors.blue[600],
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '₹$_calculatedFee INR',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1E88E5),
                     ),
                   ),
                 ),
               ],
             ),
+    );
+  },
+),
+          const SizedBox(height: 24),
+
+          // Payment Method Selection - RESPONSIVE VERSION
+Column(
+  crossAxisAlignment: CrossAxisAlignment.start,
+  children: [
+    Text(
+      'Payment Method *',
+      style: TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: Colors.grey[800],
+      ),
+    ),
+    const SizedBox(height: 12),
+    
+    // REPLACED: Use responsive payment options
+    _buildResponsivePaymentOptions(),
+  ],
+),
+          const SizedBox(height: 24),
+
+          // Pay Now Section (Conditional) - SIMPLIFIED
+          if (_selectedPaymentMethod == 'payNow') ...[
+            _buildPayNowSection(),
+            const SizedBox(height: 24),
           ],
-        ),
-        const SizedBox(height: 24),
 
-        // Pay Now Section (Conditional)
-        if (_selectedPaymentMethod == 'payNow') ...[
-          _buildPayNowSection(),
-          const SizedBox(height: 24),
+          // Payment Receipt Upload (ONLY for PayNow after actual payment)
+          if (_selectedPaymentMethod == 'payNow' && _paymentCompleted) ...[
+            _buildReceiptUploadSection(),
+            const SizedBox(height: 24),
+          ],
         ],
-
-        // Payment Receipt Upload (ONLY for PayNow after actual payment)
-        if (_selectedPaymentMethod == 'payNow' && _paymentCompleted) ...[
-          _buildReceiptUploadSection(),
-          const SizedBox(height: 24),
-        ],       
-      ],
+      ),
     ),
   );
 }
+
+// REPLACE THIS ENTIRE METHOD:
+Widget _buildResponsivePaymentOptions() {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final bool isWideScreen = constraints.maxWidth > 600;
+      
+      if (isWideScreen) {
+        // Wide screens - side by side
+        return Row(
+          children: [
+            Expanded(child: _buildPayNowOption()),
+            const SizedBox(width: 12),
+            Expanded(child: _buildPayLaterOption()),
+          ],
+        );
+      } else {
+        // Narrow screens - stacked vertically
+        return Column(
+          children: [
+            _buildPayNowOption(),
+            const SizedBox(height: 12),
+            _buildPayLaterOption(),
+          ],
+        );
+      }
+    },
+  );
+}
+
+// REPLACE THIS ENTIRE METHOD:
+Widget _buildPayNowOption() {
+  final isSelected = _selectedPaymentMethod == 'payNow';
+  
+  return ConstrainedBox(
+    constraints: const BoxConstraints(
+      minHeight: 80, // Prevents overflow by ensuring minimum height
+    ),
+    child: Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isSelected ? const Color(0xFF1E88E5) : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: isSelected ? const Color(0xFF1E88E5).withOpacity(0.05) : Colors.transparent,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            setState(() {
+              _selectedPaymentMethod = 'payNow';
+              _paymentCompleted = false;
+              _paymentReceiptUrl = null;
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16), // Consistent padding
+            child: Row(
+              children: [
+                Radio<String>(
+                  value: 'payNow',
+                  groupValue: _selectedPaymentMethod,
+                  onChanged: (String? value) {
+                    setState(() {
+                      _selectedPaymentMethod = value;
+                      _paymentCompleted = false;
+                      _paymentReceiptUrl = null;
+                    });
+                  },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center, // FIX: Centers content
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pay Now',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: isSelected ? const Color(0xFF1E88E5) : Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Complete payment immediately via UPI',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isSelected ? const Color(0xFF1E88E5).withOpacity(0.8) : Colors.grey[600],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+// REPLACE THIS ENTIRE METHOD:
+Widget _buildPayLaterOption() {
+  final isSelected = _selectedPaymentMethod == 'payLater';
+  
+  return ConstrainedBox(
+    constraints: const BoxConstraints(
+      minHeight: 80, // Prevents overflow by ensuring minimum height
+    ),
+    child: Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: isSelected ? const Color(0xFF1E88E5) : Colors.grey.shade300,
+          width: isSelected ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: isSelected ? const Color(0xFF1E88E5).withOpacity(0.05) : Colors.transparent,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            setState(() {
+              _selectedPaymentMethod = 'payLater';
+              _paymentCompleted = false;
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16), // Consistent padding
+            child: Row(
+              children: [
+                Radio<String>(
+                  value: 'payLater',
+                  groupValue: _selectedPaymentMethod,
+                  onChanged: (String? value) {
+                    setState(() {
+                      _selectedPaymentMethod = value;
+                      if (value == 'payLater') {
+                        _paymentCompleted = false;
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center, // FIX: Centers content
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pay Later',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 16,
+                          color: isSelected ? const Color(0xFF1E88E5) : Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Pay at office or later online',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: isSelected ? const Color(0xFF1E88E5).withOpacity(0.8) : Colors.grey[600],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+
+
+/*Widget _buildPaymentOption({
+  required String value,
+  required String title,
+  required String subtitle,
+  required bool isWide,
+}) {
+  return Expanded(
+    child: Container(
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: _selectedPaymentMethod == value 
+              ? const Color(0xFF1E88E5) 
+              : Colors.grey.shade300,
+          width: _selectedPaymentMethod == value ? 2 : 1,
+        ),
+        borderRadius: BorderRadius.circular(8),
+        color: _selectedPaymentMethod == value 
+            ? const Color(0xFF1E88E5).withOpacity(0.05) 
+            : Colors.transparent,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: () {
+            setState(() {
+              _selectedPaymentMethod = value;
+              if (value == 'payNow') {
+                _paymentCompleted = false;
+                _paymentReceiptUrl = null;
+              } else {
+                _paymentCompleted = false;
+              }
+            });
+          },
+          child: Padding(
+            padding: isWide 
+                ? const EdgeInsets.all(16) 
+                : const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Radio<String>(
+                  value: value,
+                  groupValue: _selectedPaymentMethod,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedPaymentMethod = newValue;
+                      if (newValue == 'payNow') {
+                        _paymentCompleted = false;
+                        _paymentReceiptUrl = null;
+                      } else {
+                        _paymentCompleted = false;
+                      }
+                    });
+                  },
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: isWide ? 16 : 14,
+                          color: _selectedPaymentMethod == value 
+                              ? const Color(0xFF1E88E5) 
+                              : Colors.grey[800],
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: isWide ? 13 : 12,
+                          color: _selectedPaymentMethod == value 
+                              ? const Color(0xFF1E88E5).withOpacity(0.8) 
+                              : Colors.grey[600],
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
+}*/
 
 Widget _buildStep1DocumentUploadSection() {
   // Show for ALL visa types that have document requirements
@@ -2587,17 +3510,22 @@ void _processStep1SelectedFiles(List<PlatformFile> files) {
 
 Widget _buildPayNowSection() {
   return Container(
-    padding: const EdgeInsets.all(16),
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Colors.green[50],
       borderRadius: BorderRadius.circular(8),
       border: Border.all(color: Colors.green),
     ),
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.of(context).size.width - 40,
+    ),
     child: Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Pay Now via UPI',
+          'Pay Now via UPI - ₹$_calculatedFee INR',
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -2606,58 +3534,167 @@ Widget _buildPayNowSection() {
         ),
         const SizedBox(height: 12),
         
-        // UPI Payment Instructions with QR Code
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.shade300),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.green.shade100,
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
+        // UPI App Selector
+        _buildUpiAppSelector(),
+        const SizedBox(height: 12),
+        
+        // QR Code Section
+        _buildQrCodePaymentSection(),
+        const SizedBox(height: 12),
+        
+        // Manual Payment - Only show if needed
+        _buildCollapsibleManualSection(),
+      ],
+    ),
+  );
+}
+
+Widget _buildCollapsibleManualSection() {
+  return Column(
+    children: [
+      ListTile(
+        leading: const Icon(Icons.help_outline, color: Colors.orange),
+        title: const Text(
+          'Need Help with Payment?',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.orange,
           ),
-          child: Column(
-            children: [
-              // ACTUAL QR CODE IMAGE - JRR INTEGRATED SOLUTIONS
-              Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.green.shade300, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                  color: Colors.white,
-                ),
+        ),
+        trailing: Icon(
+          _showManualInstructions ? Icons.expand_less : Icons.expand_more,
+          color: Colors.orange,
+        ),
+        onTap: () {
+          setState(() {
+            _showManualInstructions = !_showManualInstructions;
+          });
+        },
+      ),
+      if (_showManualInstructions) ...[
+        const SizedBox(height: 8),
+        _buildManualPaymentSection(),
+      ],
+    ],
+  );
+}
+
+Widget _buildUpiAppSelector() {
+  final upiApps = (upiPaymentConfig['supportedUpiApps'] as List<dynamic>)
+      .where((app) => (app as Map<String, dynamic>)['name'] != 'Amazon')
+      .toList();
+  
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.green.shade300),
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.white,
+    ),
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.of(context).size.width - 40,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.quick_contacts_dialer, size: 28, color: Colors.green), // Smaller icon
+        const SizedBox(height: 6), // Reduced spacing
+        const Text(
+          'Quick Pay - Open UPI App',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.green,
+            fontSize: 13, // Smaller font
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 4), // Reduced spacing
+        Text(
+          '₹$_calculatedFee',
+          style: const TextStyle(
+            fontSize: 14, // Smaller font
+            fontWeight: FontWeight.bold,
+            color: Colors.green,
+          ),
+        ),
+        const SizedBox(height: 10), // Reduced spacing
+        
+        // FIXED: Use SingleChildScrollView for horizontal scrolling
+        SizedBox(
+          height: 90, // Fixed height
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: upiApps.map((app) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4), // Reduced padding
+                  child: _buildUpiAppButton(app as Map<String, dynamic>),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
+// REPLACE _buildQrCodePaymentSection():
+Widget _buildQrCodePaymentSection() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12), // Reduced padding
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.blue.shade300),
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.white,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min, // ADD THIS
+      children: [
+        const Icon(Icons.qr_code_2, size: 32, color: Colors.blue), // Smaller icon
+        const SizedBox(height: 8),
+        const Text(
+          'Scan QR Code to Pay',
+          style: TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.blue,
+            fontSize: 14, // Smaller font
+          ),
+        ),
+        const SizedBox(height: 12),
+        
+        // FIXED: Responsive QR container
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final qrSize = constraints.maxWidth * 0.5; // 50% of available width
+            return Container(
+              width: qrSize,
+              height: qrSize,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.blue.shade300, width: 2),
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
                 child: Image.asset(
-                  //upiPaymentConfig['qrCodeImagePath'],
-                  'assets/images/JRRupi_qr_code.png', 
-                  width: 200,
-                  height: 200,
+                  upiPaymentConfig['qrCodeImagePath'],
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.qr_code_2, size: 60, color: Colors.green.shade600),
+                        Icon(Icons.qr_code_2, size: 40, color: Colors.blue.shade600),
                         const SizedBox(height: 8),
-                        Text(
-                          'Scan to Pay',
+                        const Text(
+                          'QR Code',
                           style: TextStyle(
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '₹$_calculatedFee',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                            color: Colors.blue,
+                            fontSize: 12,
                           ),
                         ),
                       ],
@@ -2665,251 +3702,301 @@ Widget _buildPayNowSection() {
                   },
                 ),
               ),
-              
-              const SizedBox(height: 16),
-              
-              // UPI Details
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey[50],
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade300),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    //_buildUpiDetailRow('UPI ID:', upiPaymentConfig['upiId']),
-                    _buildUpiDetailRow('Name:', upiPaymentConfig['name']),
-                    _buildUpiDetailRow('Amount:', '₹$_calculatedFee INR'),
-                    _buildUpiDetailRow('Note:', upiPaymentConfig['note']),
-                  ],
-                ),
-              ),
-              
-              const SizedBox(height: 12),
-              
-                // Payment Instructions
-Container(
-  padding: const EdgeInsets.all(10),
-  decoration: BoxDecoration(
-    color: Colors.blue[50],
-    borderRadius: BorderRadius.circular(6),
-  ),
-  child: Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Row(
-        children: [
-          Icon(Icons.info, size: 16, color: Colors.blue[700]),
-          const SizedBox(width: 8),
-          Text(
-            'Payment Instructions:',
-            style: TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.blue[700],
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-      const SizedBox(height: 4),
-      Text(
-        '1. Scan the QR code with any UPI app\n'
-        '2. Or manually send to UPI ID: ${upiPaymentConfig['upiId']}\n'
-        '3. Or send to GPay number: ${upiPaymentConfig['gpayNumber']}\n'
-        '4. Complete the payment\n'
-        '5. Upload the payment receipt below',
-        style: TextStyle(
-          color: Colors.blue[700],
-          fontSize: 11,
-        ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        'Bank Transfer Option:\n'
-        'Account: ${upiPaymentConfig['bankAccount']}\n'
-        'Bank: ${upiPaymentConfig['bankName']}\n'
-        'IFSC: ${upiPaymentConfig['ifscCode']}',
-        style: TextStyle(
-          color: Colors.blue[700],
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-    ],
-  ),
-),
-            ],
-          ),
+            );
+          },
         ),
         
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         
-        // Manual UPI ID Copy Section
+        // Compact instructions
         Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.orange[50],
+            color: Colors.blue[50],
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.orange),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Manual Payment Option',
+                'How to pay:',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  color: Colors.orange[800],
+                  color: Colors.blue,
+                  fontSize: 12,
                 ),
               ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      upiPaymentConfig['upiId'],
-                      style: TextStyle(
-                        color: Colors.grey[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.content_copy, size: 20),
-                    onPressed: () {
-                      // Copy UPI ID to clipboard
-                      _copyToClipboard(upiPaymentConfig['upiId']);
-                    },
-                    padding: const EdgeInsets.all(4),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Upload Receipt Button
-        SizedBox(
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: _isProcessingPayment ? null : _uploadPaymentReceipt,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
-            child: _isProcessingPayment
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.receipt_long, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Upload Payment Receipt',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-        
-        const SizedBox(height: 8),
-        
-        // Note
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.orange[50],
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.info, size: 16, color: Colors.orange[700]),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Application will be processed after receipt verification',
-                  style: TextStyle(
-                    color: Colors.orange[700],
-                    fontSize: 12,
-                  ),
+              SizedBox(height: 4),
+              Text(
+                '1. Open UPI app\n2. Scan QR code\n3. Confirm payment',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontSize: 10,
                 ),
               ),
             ],
           ),
         ),
-
-        // Enhanced Payment Error Display
-if (_paymentError != null) ...[
-  const SizedBox(height: 8),
-  Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.red[50],
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.red.shade200),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.error_outline, size: 18, color: Colors.red[700]),
-            const SizedBox(width: 8),
-            Text(
-              'Upload Error',
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Colors.red[700],
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _paymentError!,
-          style: TextStyle(
-            color: Colors.red[700],
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '💡 Tip: Try compressing large files or converting HEIC to JPG using your phone\'s built-in editor',
-          style: TextStyle(
-            color: Colors.red[600],
-            fontSize: 11,
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      ],
-    ),
-  ),
-],
       ],
     ),
   );
 }
+
+Widget _buildManualPaymentSection() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(12), // Reduced padding
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.orange.shade300),
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.white,
+    ),
+    constraints: BoxConstraints(
+      maxWidth: MediaQuery.of(context).size.width - 40,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.phone_android, color: Colors.orange, size: 18), // Smaller icon
+            SizedBox(width: 6), // Reduced spacing
+            Text(
+              'Manual Payment Instructions',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.orange,
+                fontSize: 13, // Smaller font
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8), // Reduced spacing
+        
+        // UPI Details - More compact
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8), // Reduced padding
+          decoration: BoxDecoration(
+            color: Colors.grey[50],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildUpiDetailRow('UPI ID:', upiPaymentConfig['upiId']),
+                  ),
+                  const SizedBox(width: 4), // Reduced spacing
+                  IconButton(
+                    icon: const Icon(Icons.content_copy, size: 16), // Smaller icon
+                    onPressed: () => _copyToClipboard(upiPaymentConfig['upiId']),
+                    tooltip: 'Copy UPI ID',
+                    padding: const EdgeInsets.all(2), // Reduced padding
+                  ),
+                ],
+              ),
+              _buildUpiDetailRow('Name:', upiPaymentConfig['name']),
+              _buildUpiDetailRow('Amount:', '₹$_calculatedFee INR'),
+              _buildUpiDetailRow('Note:', upiPaymentConfig['note']),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 8), // Reduced spacing
+        
+        // More compact copy buttons
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isWide = constraints.maxWidth > 400;
+            return isWide
+                ? Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _copyToClipboard(upiPaymentConfig['upiId']),
+                          icon: const Icon(Icons.copy, size: 14), // Smaller icon
+                          label: const Text('Copy UPI ID', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.orange.shade400),
+                            padding: const EdgeInsets.symmetric(vertical: 8), // Reduced padding
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6), // Reduced spacing
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _copyToClipboard('₹$_calculatedFee'),
+                          icon: const Icon(Icons.attach_money, size: 14), // Smaller icon
+                          label: const Text('Copy Amount', style: TextStyle(fontSize: 12)),
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: Colors.orange.shade400),
+                            padding: const EdgeInsets.symmetric(vertical: 8), // Reduced padding
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => _copyToClipboard(upiPaymentConfig['upiId']),
+                        icon: const Icon(Icons.copy, size: 14),
+                        label: const Text('Copy UPI ID', style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.orange.shade400),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                      const SizedBox(height: 6), // Reduced spacing
+                      OutlinedButton.icon(
+                        onPressed: () => _copyToClipboard('₹$_calculatedFee'),
+                        icon: const Icon(Icons.attach_money, size: 14),
+                        label: const Text('Copy Amount', style: TextStyle(fontSize: 12)),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.orange.shade400),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                      ),
+                    ],
+                  );
+          },
+        ),
+      ],
+    ),
+  );
+}
+
+
+
+Future<void> _openUpiApp(Map<String, dynamic> app) async {
+  try {
+    // Generate UPI payment URL
+    final upiUrl = "upi://pay?pa=${upiPaymentConfig['upiId']}"
+        "&pn=${Uri.encodeComponent(upiPaymentConfig['name'])}"
+        "&am=${_calculatedFee.toString()}"
+        "&cu=INR"
+        "&tn=${Uri.encodeComponent(upiPaymentConfig['note'])}";
+    
+    debugPrint('Opening UPI URL: $upiUrl');
+    
+    final uri = Uri.parse(upiUrl);
+    
+    // Try to launch the UPI app
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+      
+      // Show success message with instructions
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Opening ${app['name']}...', style: const TextStyle(fontWeight: FontWeight.w600)),
+              const Text('Complete payment and upload receipt below'),
+            ],
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'GOT IT',
+            textColor: Colors.white,
+            onPressed: () {},
+          ),
+        ),
+      );
+    } else {
+      // Fallback: Try to open the app directly
+      final appUri = Uri.parse('${app['scheme']}://');
+      if (await canLaunchUrl(appUri)) {
+        await launchUrl(appUri);
+      } else {
+        throw 'Could not launch ${app['name']}';
+      }
+    }
+  } catch (e) {
+    debugPrint('Error opening UPI app: $e');
+    if (!mounted) return;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Could not open ${app['name']}. Please use manual payment method.'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+    
+    // Show manual payment instructions as fallback
+    _showManualPaymentInstructions();
+  }
+}
+void _showManualPaymentInstructions() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.help_outline, color: Colors.orange),
+          SizedBox(width: 8),
+          Text('Manual Payment Guide'),
+        ],
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Follow these steps to complete payment:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 12),
+            _buildUpiDetailRow('UPI ID:', upiPaymentConfig['upiId']),
+            _buildUpiDetailRow('Amount:', '₹$_calculatedFee'),
+            _buildUpiDetailRow('Note:', upiPaymentConfig['note']),
+            const SizedBox(height: 12),
+            const Text(
+              'Payment Steps:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            const Text('1. Open any UPI app on your phone'),
+            const Text('2. Enter the UPI ID and amount above'),
+            const Text('3. Complete the payment'),
+            const Text('4. Take screenshot of confirmation'),
+            const Text('5. Upload screenshot below'),
+            const SizedBox(height: 8),
+            Text(
+              'Need help? Contact: ${upiPaymentConfig['gpayNumber']}',
+              style: TextStyle(
+                color: Colors.blue[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            Navigator.pop(context);
+            _copyToClipboard(upiPaymentConfig['upiId']);
+          },
+          child: const Text('Copy UPI ID'),
+        ),
+      ],
+    ),
+  );
+}
+
 
 // ===========================================================================
 // END OF STEP 2
@@ -2928,7 +4015,7 @@ Widget _buildReceiptUploadSection() {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text(
-        'Payment Receipt',
+        'Payment Receipt Upload',
         style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w600,
@@ -2939,6 +4026,7 @@ Widget _buildReceiptUploadSection() {
       
       if (!hasReceipt) 
         Container(
+          width: double.infinity, // ADD CONSTRAINT
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.orange.shade300),
@@ -2950,47 +4038,62 @@ Widget _buildReceiptUploadSection() {
               const Icon(Icons.receipt_long, size: 40, color: Colors.orange),
               const SizedBox(height: 8),
               const Text(
-                'Receipt Required',
+                'Upload Payment Receipt',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   color: Colors.orange,
                 ),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               Text(
-                'Please scan the QR code, complete payment, and upload your receipt',
+                'After completing UPI payment, upload your receipt screenshot here',
                 style: TextStyle(
                   color: Colors.orange[700],
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,
               ),
-
-              const SizedBox(height: 4),
-Text(
-  'Supported formats: PDF, JPG, PNG, DOC, DOCX, HEIC, WEBP, BMP, TIFF',
-  style: TextStyle(
-    color: Colors.orange[700],
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-  ),
-  textAlign: TextAlign.center,
-),
-              const SizedBox(height: 8),
-              Text(
-                'UPI ID: ${upiPaymentConfig['upiId']}',
-                style: TextStyle(
-                  color: Colors.orange[800],
-                  fontWeight: FontWeight.w500,
-                  fontSize: 12,
+              const SizedBox(height: 12),
+              
+              // ADD UPLOAD BUTTON HERE
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _isProcessingPayment ? null : _uploadPaymentReceipt,
+                  icon: _isProcessingPayment 
+                      ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Icon(Icons.cloud_upload),
+                  label: Text(_isProcessingPayment ? 'Uploading...' : 'Upload Receipt'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
-                textAlign: TextAlign.center,
               ),
+              
+              if (_paymentError != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red[50],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _paymentError!,
+                    style: TextStyle(color: Colors.red[700], fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             ],
           ),
         )
       else 
         Container(
+          width: double.infinity, // ADD CONSTRAINT
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             border: Border.all(color: Colors.green.shade300),
@@ -3010,7 +4113,7 @@ Text(
               ),
               const SizedBox(height: 8),
               Text(
-                'Your application will be processed after receipt verification',
+                'Your payment has been confirmed. You can now continue.',
                 style: TextStyle(
                   color: Colors.green[700],
                   fontSize: 14,
@@ -3039,176 +4142,242 @@ Text(
   );
 }
 
-// ===========================================================================
-// END OF STEP 4
-// ===========================================================================
 
-// NEW: Payment Processing Method
-/*
-void _processPayment() async {
-  setState(() {
-    _isProcessingPayment = true;
-    _paymentError = null;
-  });
+ Widget _buildStep5() {
+  final String displayVisaType = _selectedVisaType.name == 'Other' && 
+      _otherVisaTypeController.text.trim().isNotEmpty
+      ? '${_selectedVisaType.name} (${_otherVisaTypeController.text.trim()})'
+      : _selectedVisaType.name;
 
-  // Simulate payment processing
-  await Future.delayed(const Duration(seconds: 2));
+  final passengerBreakdown = _passengerTypeCounts.entries
+      .where((entry) => entry.value > 0)
+      .map((entry) => '${entry.key}: ${entry.value}')
+      .join(', ');
 
-  setState(() {
-    _isProcessingPayment = false;
-    _paymentCompleted = true;
-    _paymentReceiptUrl = null; // No receipt uploaded yet
-  });
+  // Build passport details
+  final passportDetails = StringBuffer();
+  for (int i = 0; i < _passportControllers.length; i++) {
+    final passengerName = _passengerNameControllers[i].text.isEmpty 
+        ? 'Passenger ${i + 1}' 
+        : _passengerNameControllers[i].text;
+    final passportNumber = _passportControllers[i].text.isEmpty 
+        ? 'Not provided' 
+        : _passportControllers[i].text;
+    final dateOfBirth = _dateOfBirthControllers[i].text.isEmpty 
+        ? 'Not provided' 
+        : _dateOfBirthControllers[i].text;
+    final issueDate = _passportIssueDateControllers[i].text.isEmpty 
+        ? 'Not provided' 
+        : _passportIssueDateControllers[i].text;
+    final expiryDate = _passportExpiryDateControllers[i].text.isEmpty 
+        ? 'Not provided' 
+        : _passportExpiryDateControllers[i].text;
+    final issuingAuthority = _issuingAuthorityControllers[i].text.isEmpty 
+        ? 'Not provided' 
+        : _issuingAuthorityControllers[i].text;
+    
+    passportDetails.writeln('• $passengerName:');
+    passportDetails.writeln('  Passport: $passportNumber');
+    passportDetails.writeln('  Date of Birth: $dateOfBirth');
+    passportDetails.writeln('  Issue Date: $issueDate');
+    passportDetails.writeln('  Expiry Date: $expiryDate');
+    passportDetails.writeln('  Issuing Authority: $issuingAuthority');
+    passportDetails.writeln('');
+  }
 
-  // Show success message
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(
-      content: Text('Payment completed successfully!'),
-      backgroundColor: Colors.green,
+  final previousRefusalText = _previousRefusal == 'yes' 
+      ? 'Yes - ${_previousRefusalController.text.isNotEmpty ? _previousRefusalController.text : "Details provided"}' 
+      : (_previousRefusal == 'no' ? 'No' : 'Not specified');
+
+  // Collect visa specific information for review
+  final visaSpecificInfo = StringBuffer();
+  if (_selectedVisaType.name == 'Student Visa') {
+    if (_institutionController.text.isNotEmpty) visaSpecificInfo.writeln('• Institution: ${_institutionController.text}');
+    if (_courseController.text.isNotEmpty) visaSpecificInfo.writeln('• Course: ${_courseController.text}');
+    if (_educationLevelController.text.isNotEmpty) visaSpecificInfo.writeln('• Education Level: ${_educationLevelController.text}');
+  } else if (_selectedVisaType.name == 'Business Visa') {
+    if (_companyController.text.isNotEmpty) visaSpecificInfo.writeln('• Company: ${_companyController.text}');
+    if (_positionController.text.isNotEmpty) visaSpecificInfo.writeln('• Position: ${_positionController.text}');
+    if (_businessPurposeController.text.isNotEmpty) visaSpecificInfo.writeln('• Purpose: ${_businessPurposeController.text}');
+  } else if (_selectedVisaType.name == 'Work Visa') {
+    if (_employerController.text.isNotEmpty) visaSpecificInfo.writeln('• Employer: ${_employerController.text}');
+    if (_jobTitleController.text.isNotEmpty) visaSpecificInfo.writeln('• Job Title: ${_jobTitleController.text}');
+    if (_workDurationController.text.isNotEmpty) visaSpecificInfo.writeln('• Duration: ${_workDurationController.text}');
+  } else if (_selectedVisaType.name == 'Medical Visa') {
+    if (_hospitalController.text.isNotEmpty) visaSpecificInfo.writeln('• Hospital: ${_hospitalController.text}');
+    if (_treatmentController.text.isNotEmpty) visaSpecificInfo.writeln('• Treatment: ${_treatmentController.text}');
+    if (_doctorController.text.isNotEmpty) visaSpecificInfo.writeln('• Doctor: ${_doctorController.text}');
+  }
+
+  // Combine documents from both steps
+  final allDocuments = [..._step1UploadedDocuments, ..._uploadedDocuments];
+  final totalDocuments = allDocuments.length;
+
+  // Document upload info for review with ACTUAL links
+  final documentInfo = totalDocuments > 0
+      ? 'Uploaded Documents (Total: $totalDocuments):\n\n'
+          '${allDocuments.asMap().entries.map((entry) {
+            final index = entry.key;
+            final doc = entry.value;
+            final stepNumber = index < _step1UploadedDocuments.length ? 'Step 1' : 'Step 2';
+            
+            if (doc.downloadUrl != null && doc.downloadUrl!.isNotEmpty) {
+              return '• ${doc.name} (${doc.extension.toUpperCase()} - ${doc.sizeInMB}) - $stepNumber\n  🔗 DOWNLOAD: ${doc.downloadUrl}';
+            } else {
+              return '• ${doc.name} (${doc.extension.toUpperCase()} - ${doc.sizeInMB}) - $stepNumber\n  ⏳ Pending Upload';
+            }
+          }).join('\n\n')}'
+      : 'No documents uploaded';
+
+  // Build comprehensive payment information
+  final paymentInfo = StringBuffer();
+  paymentInfo.writeln('• Payment Method: ${_selectedPaymentMethod == 'payNow' ? 'Pay Now (UPI)' : 'Pay Later'}');
+  paymentInfo.writeln('• Service Fee: ₹$_calculatedFee INR');
+  paymentInfo.writeln('• Payment Status: ${_paymentCompleted ? 'COMPLETED' : 'PENDING'}');
+  
+  if (_paymentReceiptUrl != null && _paymentReceiptUrl!.isNotEmpty) {
+    paymentInfo.writeln('• Receipt Status: ✅ UPLOADED SUCCESSFULLY');
+    paymentInfo.writeln('• Receipt URL: $_paymentReceiptUrl');
+  } else if (_selectedPaymentMethod == 'payNow') {
+    paymentInfo.writeln('• Receipt Status: ❌ NOT UPLOADED');
+    paymentInfo.writeln('• Action Required: Please upload payment receipt');
+  }
+
+  final duration = (_travelDate != null && _returnDate != null && _returnDate!.isAfter(_travelDate!))
+      ? _returnDate!.difference(_travelDate!).inDays
+      : 0;
+
+  return SingleChildScrollView(
+    physics: const AlwaysScrollableScrollPhysics(),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Review Application',
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey[800],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Verify all information before submission.',
+          style: TextStyle(
+            color: Colors.grey[600],
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Application Details Section
+        _buildReviewItem('Visa Type', displayVisaType),
+        _buildReviewItem('Service Fee', '₹$_calculatedFee INR'),
+        _buildReviewItem('Payment Method', _selectedPaymentMethod == 'payNow' 
+            ? 'Pay Now (UPI QR Code)' 
+            : 'Pay Later'),
+        
+        // Payment Information Section - ENHANCED
+        _buildReviewItem('Payment Information', paymentInfo.toString()),
+        
+        // Receipt Preview Section - NEW
+        if (_paymentReceiptUrl != null && _paymentReceiptUrl!.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _buildReceiptPreviewSection(),
+        ],
+
+        // Personal Information
+        _buildReviewItem('Primary Applicant', '${_firstNameController.text} ${_lastNameController.text}'),
+        _buildReviewItem('Email', _emailController.text),
+        _buildReviewItem('Phone', _phoneController.text),
+        _buildReviewItem('Previous Refusal', previousRefusalText),
+        _buildReviewItem('Destination Country', _displayCountry),
+        _buildReviewItem('Total Passengers', _passengerTypeCounts.values.reduce((a, b) => a + b).toString()),
+        
+        if (passengerBreakdown.isNotEmpty) 
+          _buildReviewItem('Passenger Types', passengerBreakdown),
+        
+        // Documents Section
+        _buildReviewItem('Supporting Documents', documentInfo),
+        
+        // Visa Specific Information
+        if (visaSpecificInfo.isNotEmpty)
+          _buildReviewItem('${_selectedVisaType.name} Details', visaSpecificInfo.toString()),
+        
+        // Passport Details
+        _buildReviewItem('Passport Details', passportDetails.toString()),
+        
+        // Travel Information
+        _buildReviewItem('Travel Date', _travelDate != null ? DateFormat('dd/MM/yyyy').format(_travelDate!) : 'Not provided'),
+        _buildReviewItem('Return Date', _returnDate != null ? DateFormat('dd/MM/yyyy').format(_returnDate!) : 'Not provided'),
+        _buildReviewItem('Duration of Stay', (_travelDate != null && _returnDate != null) ? '${_returnDate!.difference(_travelDate!).inDays} days' : 'Not calculated'),
+      ],
     ),
   );
-
-  // In real implementation, this would:
-  // 1. Integrate with UPI/payment gateway
-  // 2. Get actual payment confirmation
-  // 3. Generate receipt automatically
-}
-*/
-
-  Widget _buildStep5() {
-    final String displayVisaType = _selectedVisaType.name == 'Other' && 
-        _otherVisaTypeController.text.trim().isNotEmpty
-        ? '${_selectedVisaType.name} (${_otherVisaTypeController.text.trim()})'
-        : _selectedVisaType.name;
-
-    final passengerBreakdown = _passengerTypeCounts.entries
-        .where((entry) => entry.value > 0)
-        .map((entry) => '${entry.key}: ${entry.value}')
-        .join(', ');
-
-    final passportDetails = StringBuffer();
-for (int i = 0; i < _passportControllers.length; i++) {
-  final passengerName = _passengerNameControllers[i].text.isEmpty 
-      ? 'Passenger ${i + 1}' 
-      : _passengerNameControllers[i].text;
-  final passportNumber = _passportControllers[i].text.isEmpty 
-      ? 'Not provided' 
-      : _passportControllers[i].text;
-  final dateOfBirth = _dateOfBirthControllers[i].text.isEmpty 
-      ? 'Not provided' 
-      : _dateOfBirthControllers[i].text;
-  final issueDate = _passportIssueDateControllers[i].text.isEmpty 
-      ? 'Not provided' 
-      : _passportIssueDateControllers[i].text;
-  final expiryDate = _passportExpiryDateControllers[i].text.isEmpty 
-      ? 'Not provided' 
-      : _passportExpiryDateControllers[i].text;
-  final issuingAuthority = _issuingAuthorityControllers[i].text.isEmpty 
-      ? 'Not provided' 
-      : _issuingAuthorityControllers[i].text;
-  
-  passportDetails.writeln('• $passengerName:');
-  passportDetails.writeln('  Passport: $passportNumber');
-  passportDetails.writeln('  Date of Birth: $dateOfBirth');
-  passportDetails.writeln('  Issue Date: $issueDate');
-  passportDetails.writeln('  Expiry Date: $expiryDate');
-  passportDetails.writeln('  Issuing Authority: $issuingAuthority');
-  passportDetails.writeln('');
 }
 
-    final previousRefusalText = _previousRefusal == 'yes' 
-        ? 'Yes - ${_previousRefusalController.text.isNotEmpty ? _previousRefusalController.text : "Details provided"}' 
-        : (_previousRefusal == 'no' ? 'No' : 'Not specified');
-
-    // Collect visa specific information for review
-    final visaSpecificInfo = StringBuffer();
-    if (_selectedVisaType.name == 'Student Visa') {
-      if (_institutionController.text.isNotEmpty) visaSpecificInfo.writeln('• Institution: ${_institutionController.text}');
-      if (_courseController.text.isNotEmpty) visaSpecificInfo.writeln('• Course: ${_courseController.text}');
-      if (_educationLevelController.text.isNotEmpty) visaSpecificInfo.writeln('• Education Level: ${_educationLevelController.text}');
-    } else if (_selectedVisaType.name == 'Business Visa') {
-      if (_companyController.text.isNotEmpty) visaSpecificInfo.writeln('• Company: ${_companyController.text}');
-      if (_positionController.text.isNotEmpty) visaSpecificInfo.writeln('• Position: ${_positionController.text}');
-      if (_businessPurposeController.text.isNotEmpty) visaSpecificInfo.writeln('• Purpose: ${_businessPurposeController.text}');
-    } else if (_selectedVisaType.name == 'Work Visa') {
-      if (_employerController.text.isNotEmpty) visaSpecificInfo.writeln('• Employer: ${_employerController.text}');
-      if (_jobTitleController.text.isNotEmpty) visaSpecificInfo.writeln('• Job Title: ${_jobTitleController.text}');
-      if (_workDurationController.text.isNotEmpty) visaSpecificInfo.writeln('• Duration: ${_workDurationController.text}');
-    } else if (_selectedVisaType.name == 'Medical Visa') {
-      if (_hospitalController.text.isNotEmpty) visaSpecificInfo.writeln('• Hospital: ${_hospitalController.text}');
-      if (_treatmentController.text.isNotEmpty) visaSpecificInfo.writeln('• Treatment: ${_treatmentController.text}');
-      if (_doctorController.text.isNotEmpty) visaSpecificInfo.writeln('• Doctor: ${_doctorController.text}');
-    }
-
-    // Document upload info for review with ACTUAL links
-    // COMBINE documents from both Step 1 and Step 2
-final allDocuments = [..._step1UploadedDocuments, ..._uploadedDocuments];
-final totalDocuments = allDocuments.length;
-
-// Document upload info for review with ACTUAL links
-final documentInfo = totalDocuments > 0
-    ? 'Uploaded Documents (Total: $totalDocuments):\n\n'
-        '${allDocuments.asMap().entries.map((entry) {
-          final index = entry.key;
-          final doc = entry.value;
-          final stepNumber = index < _step1UploadedDocuments.length ? 'Step 1' : 'Step 2';
-          
-          if (doc.downloadUrl != null && doc.downloadUrl!.isNotEmpty) {
-            return '• ${doc.name} (${doc.extension.toUpperCase()} - ${doc.sizeInMB}) - $stepNumber\n  🔗 DOWNLOAD: ${doc.downloadUrl}';
-          } else {
-            return '• ${doc.name} (${doc.extension.toUpperCase()} - ${doc.sizeInMB}) - $stepNumber\n  ⏳ Pending Upload';
-          }
-        }).join('\n\n')}'
-    : 'No documents uploaded';
-
-
-    return SingleChildScrollView(
-      physics: const ClampingScrollPhysics(), // FIX: Prevent scroll jumps
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Review Application',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[800],
+// Add this new method for receipt preview
+Widget _buildReceiptPreviewSection() {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      border: Border.all(color: Colors.green.shade300),
+      borderRadius: BorderRadius.circular(8),
+      color: Colors.green[50],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Row(
+          children: [
+            Icon(Icons.receipt_long, color: Colors.green),
+            SizedBox(width: 8),
+            Text(
+              'Payment Receipt Preview',
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.green,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Your payment receipt has been uploaded successfully and will be sent to the backend team for verification.',
+          style: TextStyle(
+            color: Colors.green,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: () => _launchDocumentUrl(_paymentReceiptUrl!),
+            icon: const Icon(Icons.visibility, size: 18),
+            label: const Text('View Uploaded Receipt'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.green,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 12),
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Verify all information before submission.',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Receipt URL: ${_paymentReceiptUrl!.substring(0, 50)}...',
+          style: const TextStyle(
+            fontSize: 12,
+            color: Colors.green,
+            fontStyle: FontStyle.italic,
           ),
-          const SizedBox(height: 16),
-
-          _buildReviewItem('Visa Type', displayVisaType),
-          _buildReviewItem('Service Fee', '₹$_calculatedFee INR'),
-          _buildReviewItem('Payment Method', _selectedPaymentMethod == 'payNow' 
-              ? 'Pay Now (UPI QR Code)' 
-              : 'Pay Later'),
-          _buildReviewItem('Primary Applicant', '${_firstNameController.text} ${_lastNameController.text}'),
-          _buildReviewItem('Email', _emailController.text),
-          _buildReviewItem('Phone', _phoneController.text),
-          _buildReviewItem('Previous Refusal', previousRefusalText),
-          _buildReviewItem('Destination Country', _displayCountry),
-          _buildReviewItem('Total Passengers', _passengerTypeCounts.values.reduce((a, b) => a + b).toString()),
-          if (passengerBreakdown.isNotEmpty) 
-            _buildReviewItem('Passenger Types', passengerBreakdown),
-          _buildReviewItem('Supporting Documents', documentInfo),
-          if (visaSpecificInfo.isNotEmpty)
-            _buildReviewItem('${_selectedVisaType.name} Details', visaSpecificInfo.toString()),
-          _buildReviewItem('Passport Details', passportDetails.toString()),
-          _buildReviewItem('Travel Date', _travelDate != null ? DateFormat('dd/MM/yyyy').format(_travelDate!) : 'Not provided'),
-          _buildReviewItem('Return Date', _returnDate != null ? DateFormat('dd/MM/yyyy').format(_returnDate!) : 'Not provided'),
-          _buildReviewItem('Duration of Stay', (_travelDate != null && _returnDate != null) ? '${_returnDate!.difference(_travelDate!).inDays} days' : 'Not calculated'),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   // Visa Specific Fields Builder
   Widget _buildVisaSpecificFields() {
@@ -3227,44 +4396,89 @@ final documentInfo = totalDocuments > 0
   }
 
   Widget _buildStudentVisaFields() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+  final double screenWidth = MediaQuery.of(context).size.width;
+  final bool isWideScreen = screenWidth > 600; 
+  final bool isVeryWideScreen = screenWidth > 800; 
+  //final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait; 
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.blue[50],
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.blue),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.school, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(
+              'Student Information',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.blue[800],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Institution Name - Full width
+        TextFormField(
+          controller: _institutionController,
+          decoration: InputDecoration(
+            labelText: 'Educational Institution *',
+            hintText: 'University/College/School name',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.account_balance),
+            errorText: _institutionError,
+            isDense: true,
+          ),
+          onChanged: (v) => setState(() => _institutionError = _validateRequiredField(v, 'Institution name')),
+        ),
+        const SizedBox(height: 12),
+        
+        // Course and Education Level - Responsive layout
+        if (isVeryWideScreen)
+          // Very wide screens - side by side
           Row(
             children: [
-              const Icon(Icons.school, color: Colors.blue),
-              const SizedBox(width: 8),
-              Text(
-                'Student Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.blue[800],
+              Expanded(
+                child: TextFormField(
+                  controller: _courseController,
+                  decoration: InputDecoration(
+                    labelText: 'Course/Program *',
+                    hintText: 'e.g., Computer Science, MBA',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.menu_book),
+                    errorText: _courseError,
+                    isDense: true,
+                  ),
+                  onChanged: (v) => setState(() => _courseError = _validateRequiredField(v, 'Course name')),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: TextFormField(
+                  controller: _educationLevelController,
+                  decoration: const InputDecoration(
+                    labelText: 'Education Level',
+                    hintText: 'e.g., Undergraduate, Masters',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.school),
+                    isDense: true,
+                  ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _institutionController,
-            decoration: InputDecoration(
-              labelText: 'Educational Institution *',
-              hintText: 'University/College/School name',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.account_balance),
-              errorText: _institutionError,
-            ),
-            onChanged: (v) => setState(() => _institutionError = _validateRequiredField(v, 'Institution name')),
-          ),
-          const SizedBox(height: 12),
+          )
+        else if (isWideScreen)
+          // Wide screens - side by side with normal density
           Row(
             children: [
               Expanded(
@@ -3293,18 +4507,51 @@ final documentInfo = totalDocuments > 0
                 ),
               ),
             ],
+          )
+        else
+          // Narrow screens - stacked vertically
+          Column(
+            children: [
+              TextFormField(
+                controller: _courseController,
+                decoration: InputDecoration(
+                  labelText: 'Course/Program *',
+                  hintText: 'e.g., Computer Science, MBA',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.menu_book),
+                  errorText: _courseError,
+                ),
+                onChanged: (v) => setState(() => _courseError = _validateRequiredField(v, 'Course name')),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _educationLevelController,
+                decoration: const InputDecoration(
+                  labelText: 'Education Level',
+                  hintText: 'e.g., Undergraduate, Masters',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.school),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+        
+        const SizedBox(height: 12),
+        
+        // Student ID and Duration - Responsive layout
+        if (isWideScreen)
+          // Wide screens - side by side
           Row(
             children: [
               Expanded(
                 child: TextFormField(
                   controller: _studentIdController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Student ID',
                     hintText: 'University student ID',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.badge),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.badge),
+                    isDense: isVeryWideScreen,
                   ),
                 ),
               ),
@@ -3312,83 +4559,131 @@ final documentInfo = totalDocuments > 0
               Expanded(
                 child: TextFormField(
                   controller: _durationController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Course Duration',
                     hintText: 'e.g., 2 years, 4 semesters',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    isDense: isVeryWideScreen,
                   ),
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBusinessVisaFields() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.green[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          )
+        else
+          // Narrow screens - stacked vertically
+          Column(
             children: [
-              const Icon(Icons.business, color: Colors.green),
-              const SizedBox(width: 8),
-              Text(
-                'Business Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.green[800],
+              TextFormField(
+                controller: _studentIdController,
+                decoration: const InputDecoration(
+                  labelText: 'Student ID',
+                  hintText: 'University student ID',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.badge),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _durationController,
+                decoration: const InputDecoration(
+                  labelText: 'Course Duration',
+                  hintText: 'e.g., 2 years, 4 semesters',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _companyController,
-            decoration: InputDecoration(
-              labelText: 'Company Name *',
-              hintText: 'Your current employer',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.business_center),
-              errorText: _companyError,
+        
+        // Actually use the isPortrait variable
+        //if (isPortrait) 
+        //  const SizedBox(height: 8),
+      ],
+    ),
+  );
+}
+
+  Widget _buildBusinessVisaFields() {
+  final double screenWidth = MediaQuery.of(context).size.width;
+  final bool isWideScreen = screenWidth > 600;
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.green[50],
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.green),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Row(
+          children: [
+            const Icon(Icons.business, color: Colors.green),
+            const SizedBox(width: 8),
+            Text(
+              'Business Information',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.green[800],
+              ),
             ),
-            onChanged: (v) => setState(() => _companyError = _validateRequiredField(v, 'Company name')),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Company Name
+        TextFormField(
+          controller: _companyController,
+          decoration: InputDecoration(
+            labelText: 'Company Name *',
+            hintText: 'Your current employer',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.business_center),
+            errorText: _companyError,
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _positionController,
-            decoration: const InputDecoration(
-              labelText: 'Position/Designation',
-              hintText: 'e.g., Manager, Director',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.work),
-            ),
+          onChanged: (value) => setState(() {
+            _companyError = _validateRequiredField(value, 'Company name');
+          }),
+        ),
+        const SizedBox(height: 12),
+        
+        // Position
+        TextFormField(
+          controller: _positionController,
+          decoration: const InputDecoration(
+            labelText: 'Position/Designation',
+            hintText: 'e.g., Manager, Director',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.work),
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _businessPurposeController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              labelText: 'Business Purpose *',
-              hintText: 'Describe the purpose of your business visit...',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.description),
-              errorText: _businessPurposeError,
-            ),
-            onChanged: (v) => setState(() => _businessPurposeError = _validateRequiredField(v, 'Business purpose')),
+        ),
+        const SizedBox(height: 12),
+        
+        // Business Purpose
+        TextFormField(
+          controller: _businessPurposeController,
+          maxLines: 3,
+          decoration: InputDecoration(
+            labelText: 'Business Purpose *',
+            hintText: 'Describe the purpose of your business visit...',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.description),
+            errorText: _businessPurposeError,
+            alignLabelWithHint: true,
           ),
-          const SizedBox(height: 12),
+          onChanged: (value) => setState(() {
+            _businessPurposeError = _validateRequiredField(value, 'Business purpose');
+          }),
+        ),
+        const SizedBox(height: 12),
+        
+        // Responsive layout for Host Company and Duration
+        if (isWideScreen)
           Row(
             children: [
               Expanded(
@@ -3415,51 +4710,85 @@ final documentInfo = totalDocuments > 0
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWorkVisaFields() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.orange[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          )
+        else
+          Column(
             children: [
-              const Icon(Icons.engineering, color: Colors.orange),
-              const SizedBox(width: 8),
-              Text(
-                'Employment Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.orange[800],
+              TextFormField(
+                controller: _invitationCompanyController,
+                decoration: const InputDecoration(
+                  labelText: 'Host/Inviting Company',
+                  hintText: 'Company you are visiting',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.meeting_room),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _businessDurationController,
+                decoration: const InputDecoration(
+                  labelText: 'Expected Duration',
+                  hintText: 'e.g., 1 week, 15 days',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _employerController,
-            decoration: InputDecoration(
-              labelText: 'Employer Name *',
-              hintText: 'Company/organization name',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.business),
-              errorText: _employerError,
+      ],
+    ),
+  );
+}
+  
+  Widget _buildWorkVisaFields() {
+  final double screenWidth = MediaQuery.of(context).size.width;
+  final bool isWideScreen = screenWidth > 600;
+  final bool isVeryWideScreen = screenWidth > 800;
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.orange[50],
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.orange),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.engineering, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text(
+              'Employment Information',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.orange[800],
+              ),
             ),
-            onChanged: (v) => setState(() => _employerError = _validateRequiredField(v, 'Employer name')),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Employer Name - Full width
+        TextFormField(
+          controller: _employerController,
+          decoration: InputDecoration(
+            labelText: 'Employer Name *',
+            hintText: 'Company/organization name',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.business),
+            errorText: _employerError,
+            isDense: true,
           ),
-          const SizedBox(height: 12),
+          onChanged: (v) => setState(() => _employerError = _validateRequiredField(v, 'Employer name')),
+        ),
+        const SizedBox(height: 12),
+        
+        // Job Title and Duration - Responsive layout
+        if (isWideScreen)
           Row(
             children: [
               Expanded(
@@ -3471,97 +4800,166 @@ final documentInfo = totalDocuments > 0
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.work),
                     errorText: _jobTitleError,
+                    isDense: isVeryWideScreen, // Remove const from parent
                   ),
                   onChanged: (v) => setState(() => _jobTitleError = _validateRequiredField(v, 'Job title')),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 12), 
               Expanded(
                 child: TextFormField(
                   controller: _workDurationController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration( // Remove const
                     labelText: 'Contract Duration',
                     hintText: 'e.g., 1 year, 2 years',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.calendar_today),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.calendar_today),
+                    isDense: isVeryWideScreen,
                   ),
                 ),
               ),
             ],
+          )
+        else
+          Column(
+            children: [
+              TextFormField(
+                controller: _jobTitleController,
+                decoration: InputDecoration(
+                  labelText: 'Job Title *',
+                  hintText: 'e.g., Software Engineer, Manager',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.work),
+                  errorText: _jobTitleError,
+                ),
+                onChanged: (v) => setState(() => _jobTitleError = _validateRequiredField(v, 'Job title')),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _workDurationController,
+                decoration: const InputDecoration(
+                  labelText: 'Contract Duration',
+                  hintText: 'e.g., 1 year, 2 years',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.calendar_today),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+        
+        const SizedBox(height: 12),
+        
+        // Salary and Work Permit - Responsive layout
+        if (isWideScreen)
           Row(
             children: [
               Expanded(
                 child: TextFormField(
                   controller: _salaryController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration( // Remove const
                     labelText: 'Salary/Compensation',
                     hintText: 'Annual/monthly salary',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.attach_money),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.attach_money),
+                    isDense: isVeryWideScreen,
                   ),
                   keyboardType: TextInputType.number,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 12), // Remove const
               Expanded(
                 child: TextFormField(
                   controller: _workPermitController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration( // Remove const
                     labelText: 'Work Permit Number',
                     hintText: 'If already obtained',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.assignment),
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.assignment),
+                    isDense: isVeryWideScreen,
                   ),
                 ),
               ),
             ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMedicalVisaFields() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.red[50],
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          )
+        else
+          Column(
             children: [
-              const Icon(Icons.local_hospital, color: Colors.red),
-              const SizedBox(width: 8),
-              Text(
-                'Medical Information',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.red[800],
+              TextFormField(
+                controller: _salaryController,
+                decoration: const InputDecoration(
+                  labelText: 'Salary/Compensation',
+                  hintText: 'Annual/monthly salary',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.attach_money),
+                ),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _workPermitController,
+                decoration: const InputDecoration(
+                  labelText: 'Work Permit Number',
+                  hintText: 'If already obtained',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.assignment),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _hospitalController,
-            decoration: InputDecoration(
-              labelText: 'Hospital/Clinic Name *',
-              hintText: 'Medical facility name',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.medical_services),
-              errorText: _hospitalError,
+      ],
+    ),
+  );
+}
+
+  
+  Widget _buildMedicalVisaFields() {
+  final double screenWidth = MediaQuery.of(context).size.width;
+  final bool isWideScreen = screenWidth > 600;
+
+  return Container(
+    margin: const EdgeInsets.only(bottom: 16),
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.red[50],
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.red),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.local_hospital, color: Colors.red),
+            const SizedBox(width: 8),
+            Text(
+              'Medical Information',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.red[800],
+              ),
             ),
-            onChanged: (v) => setState(() => _hospitalError = _validateRequiredField(v, 'Hospital name')),
+          ],
+        ),
+        const SizedBox(height: 12),
+        
+        // Hospital Name - Full width
+        TextFormField(
+          controller: _hospitalController,
+          decoration: InputDecoration(
+            labelText: 'Hospital/Clinic Name *',
+            hintText: 'Medical facility name',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.medical_services),
+            errorText: _hospitalError,
+            isDense: true,
           ),
-          const SizedBox(height: 12),
+          onChanged: (v) => setState(() => _hospitalError = _validateRequiredField(v, 'Hospital name')),
+        ),
+        const SizedBox(height: 12),
+        
+        // Treatment Type and Doctor Name - Responsive layout
+        if (isWideScreen)
           Row(
             children: [
               Expanded(
@@ -3573,6 +4971,7 @@ final documentInfo = totalDocuments > 0
                     border: const OutlineInputBorder(),
                     prefixIcon: const Icon(Icons.healing),
                     errorText: _treatmentError,
+                    isDense: true,
                   ),
                   onChanged: (v) => setState(() => _treatmentError = _validateRequiredField(v, 'Treatment type')),
                 ),
@@ -3586,39 +4985,72 @@ final documentInfo = totalDocuments > 0
                     hintText: 'Treating doctor',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.person),
+                    isDense: true,
                   ),
                 ),
               ),
             ],
+          )
+        else
+          Column(
+            children: [
+              TextFormField(
+                controller: _treatmentController,
+                decoration: InputDecoration(
+                  labelText: 'Treatment Type *',
+                  hintText: 'e.g., Surgery, Therapy',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.healing),
+                  errorText: _treatmentError,
+                ),
+                onChanged: (v) => setState(() => _treatmentError = _validateRequiredField(v, 'Treatment type')),
+              ),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _doctorController,
+                decoration: const InputDecoration(
+                  labelText: 'Doctor Name',
+                  hintText: 'Treating doctor',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.person),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _medicalConditionController,
-            maxLines: 2,
-            decoration: const InputDecoration(
-              labelText: 'Medical Condition',
-              hintText: 'Brief description of medical condition...',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.description),
-            ),
+        
+        const SizedBox(height: 12),
+        
+        // Medical Condition - Full width
+        TextFormField(
+          controller: _medicalConditionController,
+          maxLines: 2,
+          decoration: const InputDecoration(
+            labelText: 'Medical Condition',
+            hintText: 'Brief description of medical condition...',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.description),
+            alignLabelWithHint: true,
           ),
-          const SizedBox(height: 12),
-          TextFormField(
-            controller: _treatmentDurationController,
-            decoration: const InputDecoration(
-              labelText: 'Expected Treatment Duration',
-              hintText: 'e.g., 2 weeks, 1 month',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.calendar_today),
-            ),
+        ),
+        const SizedBox(height: 12),
+        
+        // Treatment Duration - Full width
+        TextFormField(
+          controller: _treatmentDurationController,
+          decoration: const InputDecoration(
+            labelText: 'Expected Treatment Duration',
+            hintText: 'e.g., 2 weeks, 1 month',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.calendar_today),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
   
-
-  Widget _buildPassengerTypeSelector() {
+ Widget _buildPassengerTypeSelector() {
+  final double screenWidth = MediaQuery.of(context).size.width;
   final totalPassengers = _passengerTypeCounts.values.reduce((a, b) => a + b);
   
   return Column(
@@ -3635,79 +5067,56 @@ final documentInfo = totalDocuments > 0
       const SizedBox(height: 8),
       
       Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           border: Border.all(color: Colors.grey.shade300),
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
           children: [
-            // FIXED: Use Wrap for better responsive layout that won't overflow
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: WrapAlignment.spaceBetween,
-              children: kPassengerTypes.map((passengerType) {
+            // FIXED: Grid layout with proper constraints
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: screenWidth > 600 ? 3 : 2,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+                childAspectRatio: 0.9, // Adjusted aspect ratio
+              ),
+              itemCount: kPassengerTypes.length,
+              itemBuilder: (context, index) {
+                final passengerType = kPassengerTypes[index];
                 final count = _passengerTypeCounts[passengerType.type] ?? 0;
                 final isAllowed = _isPassengerTypeAllowed(passengerType.type);
                 
-                return SizedBox(
-                  width: 110, // Fixed width for consistent sizing
+                return Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: isAllowed ? Colors.grey.shade300 : Colors.grey.shade200,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                    color: isAllowed ? Colors.white : Colors.grey[50],
+                  ),
+                  padding: const EdgeInsets.all(8),
                   child: Column(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      // Passenger Type Name
                       Text(
                         passengerType.type,
                         style: TextStyle(
                           fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          fontWeight: FontWeight.w600,
                           color: isAllowed ? Colors.black : Colors.grey[400],
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: isAllowed ? Colors.grey.shade400 : Colors.grey.shade200,
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          color: isAllowed ? Colors.white : Colors.grey[100],
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(Icons.remove, size: 16, 
-                                  color: isAllowed && count > 0 ? const Color(0xFF1E88E5) : Colors.grey[400]),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                              onPressed: isAllowed && count > 0 
-                                  ? () => _updatePassengerCount(passengerType.type, count - 1) 
-                                  : null,
-                            ),
-                            Text(
-                              '$count',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: isAllowed ? Colors.black : Colors.grey[400],
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.add, size: 16,
-                                  color: isAllowed && totalPassengers < 20 ? const Color(0xFF1E88E5) : Colors.grey[400]),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-                              onPressed: isAllowed && totalPassengers < 20 
-                                  ? () => _updatePassengerCount(passengerType.type, count + 1) 
-                                  : null,
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
+                      
+                      // Description
                       Text(
                         passengerType.description,
                         style: TextStyle(
@@ -3718,29 +5127,97 @@ final documentInfo = totalDocuments > 0
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (!isAllowed)
+                      const SizedBox(height: 8),
+                      
+                      // FIXED COUNTER: This is the critical fix
+                      Container(
+                        constraints: const BoxConstraints(
+                          maxWidth: 100, // Prevent overflow
+                          minHeight: 32,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isAllowed ? Colors.grey.shade400 : Colors.grey.shade300,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          mainAxisSize: MainAxisSize.min, // Changed from max to min
+                          children: [
+                            // Decrement button - FIXED
+                            Container(
+                              width: 24, // Fixed width
+                              height: 24,
+                              margin: const EdgeInsets.only(left: 4),
+                              child: IconButton(
+                                icon: const Icon(Icons.remove, size: 12),
+                                color: isAllowed && count > 0 ? const Color(0xFF1E88E5) : Colors.grey[400],
+                                padding: EdgeInsets.zero,
+                                onPressed: isAllowed && count > 0 
+                                    ? () => _updatePassengerCount(passengerType.type, count - 1) 
+                                    : null,
+                              ),
+                            ),
+                            
+                            // Count - FIXED
+                            Container(
+                              constraints: const BoxConstraints(minWidth: 20),
+                              child: Text(
+                                '$count',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: isAllowed ? Colors.black : Colors.grey[400],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            
+                            // Increment button - FIXED
+                            Container(
+                              width: 24, // Fixed width
+                              height: 24,
+                              margin: const EdgeInsets.only(right: 4),
+                              child: IconButton(
+                                icon: const Icon(Icons.add, size: 12),
+                                color: isAllowed && totalPassengers < 20 ? const Color(0xFF1E88E5) : Colors.grey[400],
+                                padding: EdgeInsets.zero,
+                                onPressed: isAllowed && totalPassengers < 20 
+                                    ? () => _updatePassengerCount(passengerType.type, count + 1) 
+                                    : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      
+                      if (!isAllowed) ...[
+                        const SizedBox(height: 4),
                         Text(
                           'Not available',
                           style: TextStyle(
-                            fontSize: 9,
+                            fontSize: 8,
                             color: Colors.red[400],
                           ),
                           textAlign: TextAlign.center,
                         ),
+                      ],
                     ],
                   ),
                 );
-              }).toList(),
+              },
             ),
             
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             
-            // Total Passengers Display (UNCHANGED)
+            // Total Passengers Display
             Container(
-              padding: const EdgeInsets.all(8),
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.blue[50],
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -3748,20 +5225,34 @@ final documentInfo = totalDocuments > 0
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Total Passengers:', 
-                           style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue[800])),
-                      Text('$totalPassengers', 
-                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue[800], fontSize: 16)),
+                      Text(
+                        'Total Passengers:', 
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600, 
+                          color: Colors.blue[800],
+                          fontSize: 14,
+                        ),
+                      ),
+                      Text(
+                        '$totalPassengers', 
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold, 
+                          color: Colors.blue[800], 
+                          fontSize: 20,
+                        ),
+                      ),
                     ],
                   ),
+                  const Icon(Icons.people, color: Colors.blue, size: 24),
                 ],
               ),
             ),
           ],
         ),
       ),
+      
       if (_passengersError != null) ...[
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Text(
           _passengersError!, 
           style: TextStyle(
@@ -3773,8 +5264,7 @@ final documentInfo = totalDocuments > 0
     ],
   );
 }
-
-
+  
   
   void _updatePassengerCount(String type, int newCount) {
     setState(() {
@@ -3785,6 +5275,10 @@ final documentInfo = totalDocuments > 0
   }
 
   Widget _buildDynamicPassportFields() {
+  //final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+  final double screenWidth = MediaQuery.of(context).size.width;
+  final bool isWideScreen = screenWidth > 600;
+
   return Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
@@ -3798,6 +5292,34 @@ final documentInfo = totalDocuments > 0
       ),
       const SizedBox(height: 12),
       
+      // Document Upload Reminder
+      /*Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.orange[50],
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.orange.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.lightbulb_outline, size: 18, color: Colors.orange[700]),
+            const SizedBox(width: 8),
+            /*Expanded(
+              child: Text(
+                'Remember to upload the required ${_selectedVisaType.name} documents mentioned in the previous step',
+                style: TextStyle(
+                  color: Colors.orange[800],
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ), */
+          ],
+        ),
+      ),*/
+      const SizedBox(height: 16),
+
       ListView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
@@ -3862,101 +5384,19 @@ final documentInfo = totalDocuments > 0
                 
                 const SizedBox(height: 12),
                 
-                Row(
-                  children: [
-                    // Passport Number
-                    Expanded(
-                      child: TextFormField(
-                        controller: _passportControllers[index],
-                        decoration: InputDecoration(
-                          labelText: 'Passport Number *',
-                          hintText: 'AB1234567',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.confirmation_number),
-                          errorText: _passportErrors[index],
-                        ),
-                        onChanged: (value) {
-                          if (value != value.toUpperCase()) {
-                            _passportControllers[index].value = TextEditingValue(
-                              text: value.toUpperCase(),
-                              selection: _passportControllers[index].selection,
-                            );
-                          }
-                          setState(() {
-                            _passportErrors[index] = _validatePassportNumber(value);
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    
-                    // Issuing Authority
-                    Expanded(
-                      child: TextFormField(
-                        controller: _issuingAuthorityControllers[index],
-                        decoration: InputDecoration(
-                          labelText: 'Issuing Authority *',
-                          hintText: 'e.g., London, UK',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.location_city),
-                          errorText: _issuingAuthorityErrors[index],
-                        ),
-                        onChanged: (value) {
-                          setState(() {
-                            _issuingAuthorityErrors[index] = _validateIssuingAuthority(value);
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+                // PASSPORT NUMBER & ISSUING AUTHORITY - RESPONSIVE
+                if (isWideScreen) 
+                  _buildPassportNumberAndAuthorityWide(index)
+                else 
+                  _buildPassportNumberAndAuthorityNarrow(index),
                 
                 const SizedBox(height: 12),
                 
-                Row(
-                  children: [
-                    // Passport Issue Date
-                    Expanded(
-                      child: TextFormField(
-                        controller: _passportIssueDateControllers[index],
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          labelText: 'Issue Date *',
-                          hintText: 'DD/MM/YYYY',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.date_range),
-                          errorText: _passportIssueDateErrors[index],
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
-                            onPressed: () => _selectPassengerDate('issue', index),
-                          ),
-                        ),
-                        onTap: () => _selectPassengerDate('issue', index),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    
-                    // Passport Expiry Date
-                    Expanded(
-                      child: TextFormField(
-                        controller: _passportExpiryDateControllers[index],
-                        readOnly: true,
-                        decoration: InputDecoration(
-                          labelText: 'Expiry Date *',
-                          hintText: 'DD/MM/YYYY',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.event_busy),
-                          errorText: _passportExpiryDateErrors[index],
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.calendar_today),
-                            onPressed: () => _selectPassengerDate('expiry', index),
-                          ),
-                        ),
-                        onTap: () => _selectPassengerDate('expiry', index),
-                      ),
-                    ),
-                  ],
-                ),
+                // ISSUE DATE & EXPIRY DATE - RESPONSIVE
+                if (isWideScreen) 
+                  _buildPassportDatesWide(index)
+                else 
+                  _buildPassportDatesNarrow(index),
               ],
             ),
           );
@@ -3965,6 +5405,191 @@ final documentInfo = totalDocuments > 0
     ],
   );
 }
+
+// PASSPORT FIELD LAYOUT HELPERS
+
+// Wide screen layout for passport number and issuing authority
+Widget _buildPassportNumberAndAuthorityWide(int index) {
+  return Row(
+    children: [
+      Expanded(
+        child: TextFormField(
+          controller: _passportControllers[index],
+          decoration: const InputDecoration(
+            labelText: 'Passport Number *',
+            hintText: 'AB1234567',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.confirmation_number),
+            //errorText: _passportErrors[index],
+          ),
+          onChanged: (value) {
+            if (value != value.toUpperCase()) {
+              _passportControllers[index].value = TextEditingValue(
+                text: value.toUpperCase(),
+                selection: _passportControllers[index].selection,
+              );
+            }
+            setState(() {
+              _passportErrors[index] = _validatePassportNumber(value);
+            });
+          },
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: TextFormField(
+          controller: _issuingAuthorityControllers[index],
+          decoration: const InputDecoration(
+            labelText: 'Issuing Authority *',
+            hintText: 'e.g., London, UK',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.location_city),
+            //errorText: _issuingAuthorityErrors[index],
+          ),
+          onChanged: (value) {
+            setState(() {
+              _issuingAuthorityErrors[index] = _validateIssuingAuthority(value);
+            });
+          },
+        ),
+      ),
+    ],
+  );
+}
+
+// Narrow screen layout for passport number and issuing authority
+Widget _buildPassportNumberAndAuthorityNarrow(int index) {
+  return Column(
+    children: [
+      TextFormField(
+        controller: _passportControllers[index],
+        decoration: InputDecoration(
+          labelText: 'Passport Number *',
+          hintText: 'AB1234567',
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.confirmation_number),
+          errorText: _passportErrors[index],
+        ),
+        onChanged: (value) {
+          if (value != value.toUpperCase()) {
+            _passportControllers[index].value = TextEditingValue(
+              text: value.toUpperCase(),
+              selection: _passportControllers[index].selection,
+            );
+          }
+          setState(() {
+            _passportErrors[index] = _validatePassportNumber(value);
+          });
+        },
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        controller: _issuingAuthorityControllers[index],
+        decoration: InputDecoration(
+          labelText: 'Issuing Authority *',
+          hintText: 'e.g., London, UK',
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.location_city),
+          errorText: _issuingAuthorityErrors[index],
+        ),
+        onChanged: (value) {
+          setState(() {
+            _issuingAuthorityErrors[index] = _validateIssuingAuthority(value);
+          });
+        },
+      ),
+    ],
+  );
+}
+
+// Wide screen layout for passport dates
+Widget _buildPassportDatesWide(int index) {
+  return Row(
+    children: [
+      Expanded(
+        child: TextFormField(
+          controller: _passportIssueDateControllers[index],
+          readOnly: true,
+          decoration: InputDecoration(
+            labelText: 'Issue Date *',
+            hintText: 'DD/MM/YYYY',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.date_range),
+            errorText: _passportIssueDateErrors[index],
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.calendar_today),
+              onPressed: () => _selectPassengerDate('issue', index),
+            ),
+          ),
+          onTap: () => _selectPassengerDate('issue', index),
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: TextFormField(
+          controller: _passportExpiryDateControllers[index],
+          readOnly: true,
+          decoration: InputDecoration(
+            labelText: 'Expiry Date *',
+            hintText: 'DD/MM/YYYY',
+            border: const OutlineInputBorder(),
+            prefixIcon: const Icon(Icons.event_busy),
+            errorText: _passportExpiryDateErrors[index],
+            suffixIcon: IconButton(
+              icon: const Icon(Icons.calendar_today),
+              onPressed: () => _selectPassengerDate('expiry', index),
+            ),
+          ),
+          onTap: () => _selectPassengerDate('expiry', index),
+        ),
+      ),
+    ],
+  );
+}
+
+// Narrow screen layout for passport dates
+Widget _buildPassportDatesNarrow(int index) {
+  return Column(
+    children: [
+      TextFormField(
+        controller: _passportIssueDateControllers[index],
+        readOnly: true,
+        decoration: InputDecoration(
+          labelText: 'Issue Date *',
+          hintText: 'DD/MM/YYYY',
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.date_range),
+          errorText: _passportIssueDateErrors[index],
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: () => _selectPassengerDate('issue', index),
+          ),
+        ),
+        onTap: () => _selectPassengerDate('issue', index),
+      ),
+      const SizedBox(height: 12),
+      TextFormField(
+        controller: _passportExpiryDateControllers[index],
+        readOnly: true,
+        decoration: InputDecoration(
+          labelText: 'Expiry Date *',
+          hintText: 'DD/MM/YYYY',
+          border: const OutlineInputBorder(),
+          prefixIcon: const Icon(Icons.event_busy),
+          errorText: _passportExpiryDateErrors[index],
+          suffixIcon: IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: () => _selectPassengerDate('expiry', index),
+          ),
+        ),
+        onTap: () => _selectPassengerDate('expiry', index),
+      ),
+    ],
+  );
+}
+
+
+
   Widget _buildReviewItem(String label, String value) {
     return Container(
       width: double.infinity,
@@ -4008,7 +5633,7 @@ final documentInfo = totalDocuments > 0
     // CHANGED: Review becomes Step 5
     Step(
       title: const Text('Review', style: TextStyle(fontWeight: FontWeight.w600)), 
-      content: _buildStep5(),  // CHANGED: _buildStep4() to _buildStep5()
+      content: _buildStep5(),  
       isActive: _currentStep >= 4, 
       state: StepState.indexed
     ),
@@ -4489,7 +6114,6 @@ Future<void> _selectPassengerDate(String fieldType, int passengerIndex) async {
     }
   }
 }
-// RESTORED: Complete email generation with all original details
 void _generateAndSendEmailWithLinks(String applicationId, List<String> downloadLinks, String? receiptUrl) {
   final subject = 'Visa Application - ${_firstNameController.text} ${_lastNameController.text} (ID: $applicationId)';
   
@@ -4503,7 +6127,7 @@ void _generateAndSendEmailWithLinks(String applicationId, List<String> downloadL
       .map((entry) => '${entry.key}: ${entry.value}')
       .join(', ');
 
-  // Build clean passport details - RESTORED FROM ORIGINAL
+  // Build clean passport details
   final passportDetails = StringBuffer();
   for (int i = 0; i < _passportControllers.length; i++) {
     final passengerName = _passengerNameControllers[i].text.isEmpty 
@@ -4542,7 +6166,7 @@ void _generateAndSendEmailWithLinks(String applicationId, List<String> downloadL
       ? 'Yes - ${_previousRefusalController.text.isNotEmpty ? _previousRefusalController.text : "Details provided"}' 
       : (_previousRefusal == 'no' ? 'No' : 'Not specified');
 
-  // Build visa-specific information - RESTORED FROM ORIGINAL
+  // Build visa-specific information
   final visaSpecificInfo = StringBuffer();
   if (_selectedVisaType.name == 'Student Visa') {
     if (_institutionController.text.isNotEmpty) visaSpecificInfo.writeln('• Institution: ${_institutionController.text}');
@@ -4566,14 +6190,14 @@ void _generateAndSendEmailWithLinks(String applicationId, List<String> downloadL
     if (_treatmentDurationController.text.isNotEmpty) visaSpecificInfo.writeln('• Duration: ${_treatmentDurationController.text}');
   }
 
-  // FIX: Combine documents from both steps and calculate accurate counts
+  // Combine documents from both steps
   final combinedDocuments = [..._step1UploadedDocuments, ..._uploadedDocuments];
   final totalDocuments = combinedDocuments.length;
   final successfulDocuments = combinedDocuments.where((doc) => 
       doc.downloadUrl != null && doc.downloadUrl!.isNotEmpty).length;
   final failedDocuments = totalDocuments - successfulDocuments;
 
-  // RESTORED: Complete email body with all original sections
+  // Build email body with proper receipt information
   final emailBody = '''
 **VISA APPLICATION - NEW SUBMISSION**
 
@@ -4581,6 +6205,21 @@ void _generateAndSendEmailWithLinks(String applicationId, List<String> downloadL
 • Application ID: $applicationId
 • Submitted: ${_emailDateFormatter.format(DateTime.now().toLocal())}
 • Status: Pending Review
+
+**PAYMENT INFORMATION**
+• Payment Method: ${_selectedPaymentMethod == 'payNow' ? 'Paid via UPI' : 'Pay Later'}
+• Amount: ₹$_calculatedFee INR
+• Payment Status: ${_paymentCompleted ? 'COMPLETED' : 'PENDING'}
+${_paymentReceiptUrl != null && _paymentReceiptUrl!.isNotEmpty ? '''
+**PAYMENT RECEIPT**
+• Receipt Status: ✅ UPLOADED SUCCESSFULLY
+• Receipt URL: $_paymentReceiptUrl
+• Viewable by backend team for verification
+''' : (_selectedPaymentMethod == 'payNow' ? '''
+**PAYMENT RECEIPT**
+• Receipt Status: ❌ NOT UPLOADED
+• Action Required: Applicant needs to upload payment receipt
+''' : '')}
 
 **APPLICANT INFORMATION**
 • Primary Applicant: ${_firstNameController.text} ${_lastNameController.text}
@@ -4593,8 +6232,6 @@ void _generateAndSendEmailWithLinks(String applicationId, List<String> downloadL
 • Destination: $_displayCountry
 • Travel Dates: ${_travelDate != null ? DateFormat('dd/MM/yyyy').format(_travelDate!) : 'N/A'} to ${_returnDate != null ? DateFormat('dd/MM/yyyy').format(_returnDate!) : 'N/A'}
 • Duration: $duration days
-• Service Fee: ₹$_calculatedFee INR
-• Payment: ${_selectedPaymentMethod == 'payNow' ? 'Paid (UPI)' : 'Pay Later'}
 
 **PASSENGER DETAILS**
 • Total Passengers: ${_passengerTypeCounts.values.reduce((a, b) => a + b)}
@@ -4610,7 +6247,7 @@ $passportDetails
 • Successful: $successfulDocuments
 • Failed: $failedDocuments
 
-${combinedDocuments.isNotEmpty ? 'UPLOADED DOCUMENTS:' : 'No documents uploaded'}
+${combinedDocuments.isNotEmpty ? '**UPLOADED DOCUMENTS**:' : '**UPLOADED DOCUMENTS**: No documents uploaded'}
 ${combinedDocuments.map((doc) {
   if (doc.downloadUrl != null && doc.downloadUrl!.isNotEmpty) {
     return '• ${doc.name} (${doc.extension.toUpperCase()} - ${doc.sizeInMB})\n  Download URL: ${doc.downloadUrl}';
@@ -4619,11 +6256,6 @@ ${combinedDocuments.map((doc) {
   }
 }).join('\n\n')}
 
-${receiptUrl != null && receiptUrl.isNotEmpty ? '''
-**PAYMENT RECEIPT**
-• Receipt URL: $receiptUrl
-''' : ''}
-
 ---
 **ACTION REQUIRED:** Please process this application and contact applicant if additional information needed.
 
@@ -4631,7 +6263,7 @@ Best regards,
 JRR Immigration Services
 ''';
 
-  _sendVisaEmail(subject, emailBody, receiptUrl, applicationId);
+  _sendVisaEmail(subject, emailBody, _paymentReceiptUrl, applicationId);
 }
   // PROPER Email Sending with Resend API
 Future<void> _sendVisaEmail(String subject, String body, String? receiptUrl, String applicationId) async {
@@ -4654,7 +6286,7 @@ Future<void> _sendVisaEmail(String subject, String body, String? receiptUrl, Str
     }
   } catch (error) {
     if (!mounted) return;
-    print('Email sending error: $error');
+    debugPrint('Email sending error: $error');
     // Fallback: Show manual option
     _showManualEmailOption(subject, body);
   } finally {
@@ -4681,13 +6313,14 @@ Future<bool> _sendEmailViaResendAPI(String subject, String body, String applicat
     
     return response;
   } catch (e) {
-    print('Edge Function email error: $e');
+    debugPrint('Edge Function email error: $e');
     return false;
   }
 }
 
   // Fallback method for email issues
   void _showManualEmailOption(String subject, String body) {
+    if (!mounted) return;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -5150,6 +6783,219 @@ Future<void> _savePaymentToDatabase(String applicationUuid) async {
   setState(() => _currentStep = step);
 }
 
+// ===========================================================================
+// STEP 1: RESPONSIVE METHODS - ADD THESE NEW METHODS
+// ===========================================================================
+
+Widget _buildResponsiveStepper(bool isPortrait, double screenWidth) {
+  // For very small screens or landscape, use a simplified stepper
+  if (screenWidth < 400 || !isPortrait) {
+    return _buildCompactStepper();
+  }
+  
+  // For normal screens, use the original but improved stepper
+  return Theme(
+    data: ThemeData(
+      colorScheme: const ColorScheme.light(primary: Color(0xFF1E88E5)),
+    ),
+    child: Stepper(
+      currentStep: _currentStep,
+      onStepContinue: _onStepContinue,
+      onStepCancel: _onStepCancel,
+      onStepTapped: _onStepTapped,
+      controlsBuilder: (context, details) {
+        return _buildStepperControls(details, isPortrait);
+      },
+      steps: _buildSteps(),
+    ),
+  );
+}
+
+Widget _buildCompactStepper() {
+  return Column(
+    children: [
+      // Progress indicator
+      Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Step ${_currentStep + 1} of ${_buildSteps().length}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1E88E5),
+              ),
+            ),
+            Text(
+              _getStepTitle(_currentStep),
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[700],
+              ),
+            ),
+          ],
+        ),
+      ),
+      
+      // Step content
+      _buildCurrentStepContent(),
+      
+      const SizedBox(height: 20),
+      
+      // Navigation buttons
+      _buildStepperControls(null, true),
+    ],
+  );
+}
+
+String _getStepTitle(int step) {
+  switch (step) {
+    case 0: return 'Personal Info';
+    case 1: return 'Passport Details';
+    case 2: return 'Travel Plans';
+    case 3: return 'Payment & Docs';
+    case 4: return 'Review';
+    default: return 'Step ${step + 1}';
+  }
+}
+
+Widget _buildCurrentStepContent() {
+  switch (_currentStep) {
+    case 0: return _buildStep1();
+    case 1: return _buildStep2();
+    case 2: return _buildStep3();
+    case 3: return _buildStep4();
+    case 4: return _buildStep5();
+    default: return _buildStep1();
+  }
+}
+
+void _onStepContinue() {
+  bool isCurrentStepValid = true;
+  String? errorMessage;
+  
+  switch (_currentStep) {
+    case 0:
+      isCurrentStepValid = _validateStep1();
+      if (!isCurrentStepValid) {
+        errorMessage = 'Please fix all errors in Personal Information before continuing';
+      }
+      break;
+    case 1:
+      isCurrentStepValid = _validateStep2();
+      if (!isCurrentStepValid) {
+        errorMessage = 'Please fix all errors in Passport Details before continuing';
+      }
+      break;
+    case 2:
+      isCurrentStepValid = _validateStep3();
+      if (!isCurrentStepValid) {
+        errorMessage = 'Please fix all errors in Travel Plans before continuing';
+      }
+      break;
+    case 3:
+      isCurrentStepValid = _validateStep4();
+      if (!isCurrentStepValid) {
+        // Error message is shown in the validation method
+        return;
+      }
+      break;
+    case 4:
+      isCurrentStepValid = true; // Review step doesn't need validation
+      break;
+  }
+  
+  if (!isCurrentStepValid && errorMessage != null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+    return;
+  }
+  
+  // Only proceed if validation passes
+  if (_currentStep < _buildSteps().length - 1) {
+    setState(() => _currentStep++);
+    
+    // Scroll to top when moving to next step
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PrimaryScrollController.of(context).animateTo(
+        0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    });
+  } else {
+    _submitApplication();
+  }
+}
+
+void _onStepCancel() {
+  if (_currentStep > 0) setState(() => _currentStep--);
+}
+
+Widget _buildStepperControls(ControlsDetails? details, bool isPortrait) {
+  return Padding(
+    padding: const EdgeInsets.only(top: 20),
+    child: Row(
+      children: [
+        if (_currentStep > 0)
+          Expanded(
+            child: OutlinedButton(
+              onPressed: _onStepCancel,
+              style: OutlinedButton.styleFrom(
+                padding: EdgeInsets.symmetric(
+                  vertical: isPortrait ? 12 : 10,
+                ),
+                side: const BorderSide(color: Color(0xFF1E88E5)),
+              ),
+              child: Text(
+                'BACK',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E88E5),
+                  fontSize: isPortrait ? 14 : 12,
+                ),
+              ),
+            ),
+          ),
+        if (_currentStep > 0) const SizedBox(width: 12),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: details?.onStepContinue ?? _onStepContinue,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E88E5),
+              padding: EdgeInsets.symmetric(
+                vertical: isPortrait ? 12 : 10,
+              ),
+            ),
+            child: _isSubmitting
+                ? const SizedBox(
+                    height: 20, 
+                    width: 20, 
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2, 
+                      color: Colors.white
+                    ),
+                  )
+                : Text(
+                    _currentStep == _buildSteps().length - 1 ? 'SUBMIT' : 'CONTINUE',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      fontSize: isPortrait ? 14 : 12,
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 // Add this method to get visa-specific document requirements
 String _getVisaDocumentRequirements() {
   switch (_selectedVisaType.name) {
@@ -5198,199 +7044,127 @@ String _getVisaDocumentRequirements() {
   }
 }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Visa Application',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(0xFF1E88E5),
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-    IconButton(
-      icon: const Icon(Icons.refresh),
-      onPressed: _resetForm,
-      tooltip: 'Reset Form',
-    ),
-  ],
-      ),
-      body: SingleChildScrollView(
-        
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Visa Application',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: Color(0xFF1E88E5),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Complete this multi-step form to apply for your visa. Our team will process your application within 3-5 business days.',
-                      style: TextStyle(
-                        color: Colors.grey[600],
-                        fontSize: 14,
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    Theme(
-                      data: ThemeData(
-                        colorScheme: const ColorScheme.light(primary: Color(0xFF1E88E5)),
-                      ),
-                      child: Stepper(
-                        currentStep: _currentStep,
-                        onStepContinue: () {
-  bool isCurrentStepValid = true;
-  
-  // Validate ONLY the current step before proceeding
-  switch (_currentStep) {
-    case 0:
-      isCurrentStepValid = _validateStep1();
-      break;
-    case 1:
-      isCurrentStepValid = _validateStep2();
-      break;
-    case 2:
-      isCurrentStepValid = _validateStep3();
-      break;
-    case 3:
-      isCurrentStepValid = _validateStep4();
-      break;
-    case 4: // Review step - no validation needed
-      isCurrentStepValid = true;
-      break;
-  }
-  
-  if (!isCurrentStepValid) {
-    // Show error message and stay on current step
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Please fix errors in step ${_currentStep + 1} before continuing'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
-  
-  // Only proceed to next step if validation passes
-  if (_currentStep < _buildSteps().length - 1) {
-    setState(() => _currentStep++);
-  } else {
-    _submitApplication();
-  }
-},
-                        onStepCancel: () {
-                          if (_currentStep > 0) setState(() => _currentStep--);
-                        },
-                        onStepTapped: _onStepTapped,
-                        controlsBuilder: (context, details) {
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 20),
-                            child: Row(children: [
-                              if (_currentStep > 0)
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: details.onStepCancel,
-                                    style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 12),
-                                      side: const BorderSide(color: Color(0xFF1E88E5)),
-                                    ),
-                                    child: const Text(
-                                      'BACK',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF1E88E5),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              if (_currentStep > 0) const SizedBox(width: 12),
-                              Expanded(
-                                child: ElevatedButton(
-                                  onPressed: details.onStepContinue,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF1E88E5),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                  ),
-                                  child: _isSubmitting
-                                      ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                      : Text(
-                                          _currentStep == _buildSteps().length - 1 ? 'SUBMIT' : 'CONTINUE',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ]),
-                          );
-                        },
-                        steps: _buildSteps(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+@override
+Widget build(BuildContext context) {
+  final bool isPortrait = MediaQuery.of(context).orientation == Orientation.portrait;
+  final double screenWidth = MediaQuery.of(context).size.width;
 
-            const SizedBox(height: 16),
-            Card(
-              elevation: 1,
-              color: Colors.blue[50],
-              child: const Padding(
-                padding: EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.blue, size: 20),
-                    SizedBox(width: 12),
-                    Expanded(
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text(
+        'Visa Application',
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: Colors.white,
+        ),
+      ),
+      backgroundColor: const Color(0xFF1E88E5),
+      foregroundColor: Colors.white,
+      elevation: 0,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          onPressed: _resetForm,
+          tooltip: 'Reset Form',
+        ),
+      ],
+    ),
+    body: SafeArea(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            padding: EdgeInsets.symmetric(
+              horizontal: isPortrait ? 16 : 8,
+              vertical: 12,
+            ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: constraints.maxHeight,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // MAIN CARD
+                  Card(
+                    elevation: 2,
+                    child: Padding(
+                      padding: EdgeInsets.all(isPortrait ? 20 : 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Application Processing',
+                          const Text(
+                            'Visa Application',
                             style: TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.w600,
-                              color: Colors.blue,
+                              color: Color(0xFF1E88E5),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Complete this multi-step form to apply for your visa. Our team will process your application within 3-5 business days.',
+                            style: TextStyle(
+                              color: Colors.grey[600],
                               fontSize: 14,
                             ),
                           ),
-                          SizedBox(height: 4),
-                          Text(
-                            'Standard processing time: 3-5 business days. Urgent processing available upon request.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.blue,
+                          
+                          const SizedBox(height: 24),
+                          
+                          // STEPPER SECTION - UPDATED
+                          _buildResponsiveStepper(isPortrait, screenWidth),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                  
+                  // INFO CARD
+                  Card(
+                    elevation: 1,
+                    color: Colors.blue[50],
+                    child: Padding(
+                      padding: EdgeInsets.all(isPortrait ? 16 : 12),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info, color: Colors.blue, size: 20),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Application Processing',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Standard processing time: 3-5 business days. Urgent processing available upon request.',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.blue,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -424,6 +424,22 @@ JRR Immigration Advisory Team
     });
   }
 
+  // Custom dropdown menu item with proper overflow handling
+  Widget _buildDropdownMenuItem(String value) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      child: Text(
+        value,
+        style: GoogleFonts.inter(
+          fontSize: 14,
+        ),
+        overflow: TextOverflow.ellipsis,
+        maxLines: 2,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -439,391 +455,624 @@ JRR Immigration Advisory Team
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              elevation: 1,
-              color: Colors.blue[50],
-              child: const Padding(
-                padding: EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.blue, size: 24),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Fill the form and we\'ll send your request directly to our immigration specialists. No need to manually send emails.',
-                        style: TextStyle(fontSize: 12, height: 1.4),
-                      ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isWideScreen = constraints.maxWidth > 600;
+          
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Card(
+                  elevation: 1,
+                  color: Colors.blue[50],
+                  child: const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.blue, size: 24),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Fill the form and we\'ll send your request directly to our immigration specialists. No need to manually send emails.',
+                            style: TextStyle(fontSize: 12, height: 1.4),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            Card(
-              elevation: 2,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Professional Immigration Advice',
-                        style: GoogleFonts.inter(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF1E88E5),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Complete the form below and we\'ll send your request directly to our immigration specialists.',
-                        style: GoogleFonts.inter(
-                          color: Colors.grey[600],
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
-                      Text(
-                        'Personal Information',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _fullNameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Full Name *',
-                                hintText: 'Full Name',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.person),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your full name';
-                                }
-                                if (value.length < 2) {
-                                  return 'Please enter a valid name';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _emailController,
-                              decoration: const InputDecoration(
-                                labelText: 'Email *',
-                                hintText: 'Email',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.email),
-                              ),
-                              keyboardType: TextInputType.emailAddress,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter email address';
-                                }
-                                if (!_isValidEmail(value)) {
-                                  return 'Please enter valid email address';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _phoneController,
-                              decoration: const InputDecoration(
-                                labelText: 'Phone *',
-                                hintText: 'Phone',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.phone),
-                              ),
-                              keyboardType: TextInputType.phone,
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter phone number';
-                                }
-                                if (!_isValidPhone(value)) {
-                                  return 'Enter valid phone number';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 20),
-
-                      Text(
-                        'Immigration Details',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextFormField(
-                              controller: _currentCountryController,
-                              decoration: const InputDecoration(
-                                labelText: 'Current Country *',
-                                hintText: 'e.g., India, USA, UK',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.location_on),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter current country';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _targetCountryController,
-                              decoration: const InputDecoration(
-                                labelText: 'Destination Country *',
-                                hintText: 'e.g., Canada, Australia, USA',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.flag),
-                              ),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter destination country';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 12),
-                      
-                      Row(
-                        children: [
-                          Expanded(
-                            child: DropdownButtonFormField<String>(
-                              value: _selectedAdviceType,
-                              decoration: const InputDecoration(
-                                labelText: 'Type of Advice Needed *',
-                                hintText: 'Select advice type',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.help_outline),
-                              ),
-                              items: _adviceTypes.map((String type) {
-                                return DropdownMenuItem<String>(
-                                  value: type,
-                                  child: Text(type),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  _selectedAdviceType = newValue;
-                                });
-                              },
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please select advice type';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextFormField(
-                              controller: _visaTypeController,
-                              decoration: const InputDecoration(
-                                labelText: 'Preferred Visa Type',
-                                hintText: 'e.g., Student Visa, Work Permit',
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.assignment),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 12),
-                      
-                      DropdownButtonFormField<String>(
-                        value: _selectedTimeline,
-                        decoration: const InputDecoration(
-                          labelText: 'Preferred Timeline',
-                          hintText: 'Select your timeline',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.schedule),
-                        ),
-                        items: _timelineOptions.map((String timeline) {
-                          return DropdownMenuItem<String>(
-                            value: timeline,
-                            child: Text(timeline),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          setState(() {
-                            _selectedTimeline = newValue;
-                          });
-                        },
-                      ),
-                      
-                      const SizedBox(height: 20),
-
-                      Text(
-                        'Purpose of Immigration',
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[800],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _purposeController,
-                        maxLines: 3,
-                        maxLength: 120,
-                        decoration: InputDecoration(
-                          labelText: 'Purpose of Immigration (Optional)',
-                          hintText: 'Describe your purpose for immigration (up to 120 characters)',
-                          border: const OutlineInputBorder(),
-                          alignLabelWithHint: true,
-                          counterText: '$_purposeCharCount/120 characters',
-                          counterStyle: TextStyle(
-                            color: _purposeCharCount > 120 ? Colors.red : Colors.grey,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        onChanged: _updatePurposeCharCount,
-                      ),
-                      
-                      const SizedBox(height: 24),
-
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: _isSubmitting ? null : _submitForm,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1E88E5),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                elevation: 2,
-                              ),
-                              child: _isSubmitting
-                                  ? const SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.email, size: 20),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          'Send Request',
-                                          style: GoogleFonts.inter(
-                                            fontWeight: FontWeight.w600,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: _resetForm,
-                              style: OutlinedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                side: const BorderSide(color: Color(0xFF1E88E5)),
-                              ),
-                              child: Text(
-                                'Reset Form',
-                                style: GoogleFonts.inter(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 16,
-                                  color: const Color(0xFF1E88E5),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[50],
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '📧 How It Works:',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w600,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              '• Your request is sent directly to our team\n'
-                              '• No manual email sending required\n'
-                              '• Team will contact you within 24 hours\n'
-                              '• Fallback email option available if needed',
-                              style: GoogleFonts.inter(
-                                fontSize: 11,
-                                color: Colors.grey[700],
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ),
                 ),
-              ),
+
+                const SizedBox(height: 16),
+
+                Card(
+                  elevation: 2,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Professional Immigration Advice',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1E88E5),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Complete the form below and we\'ll send your request directly to our immigration specialists.',
+                            style: GoogleFonts.inter(
+                              color: Colors.grey[600],
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          Text(
+                            'Personal Information',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Personal Information Row - Responsive
+                          if (isWideScreen)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _fullNameController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Full Name *',
+                                      hintText: 'Enter your full name',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.person),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter your full name';
+                                      }
+                                      if (value.length < 2) {
+                                        return 'Please enter a valid name';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _emailController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Email *',
+                                      hintText: 'Enter your email address',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.email),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                    ),
+                                    keyboardType: TextInputType.emailAddress,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter email address';
+                                      }
+                                      if (!_isValidEmail(value)) {
+                                        return 'Please enter valid email address';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _phoneController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Phone *',
+                                      hintText: 'Enter your phone number',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.phone),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                    ),
+                                    keyboardType: TextInputType.phone,
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter phone number';
+                                      }
+                                      if (!_isValidPhone(value)) {
+                                        return 'Enter valid phone number';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Column(
+                              children: [
+                                TextFormField(
+                                  controller: _fullNameController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Full Name *',
+                                    hintText: 'Enter your full name',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.person),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter your full name';
+                                    }
+                                    if (value.length < 2) {
+                                      return 'Please enter a valid name';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _emailController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Email *',
+                                    hintText: 'Enter your email address',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.email),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                  ),
+                                  keyboardType: TextInputType.emailAddress,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter email address';
+                                    }
+                                    if (!_isValidEmail(value)) {
+                                      return 'Please enter valid email address';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _phoneController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Phone *',
+                                    hintText: 'Enter your phone number',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.phone),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                  ),
+                                  keyboardType: TextInputType.phone,
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter phone number';
+                                    }
+                                    if (!_isValidPhone(value)) {
+                                      return 'Enter valid phone number';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          
+                          const SizedBox(height: 20),
+
+                          Text(
+                            'Immigration Details',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          // Current and Destination Country - Responsive
+                          if (isWideScreen)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _currentCountryController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Current Country *',
+                                      hintText: 'e.g., India, USA, UK',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.location_on),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter current country';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _targetCountryController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Destination Country *',
+                                      hintText: 'e.g., Canada, Australia, USA',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.flag),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                    ),
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please enter destination country';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Column(
+                              children: [
+                                TextFormField(
+                                  controller: _currentCountryController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Current Country *',
+                                    hintText: 'e.g., India, USA, UK',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.location_on),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter current country';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _targetCountryController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Destination Country *',
+                                    hintText: 'e.g., Canada, Australia, USA',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.flag),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                  ),
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please enter destination country';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          
+                          const SizedBox(height: 12),
+                          
+                          // Advice Type and Visa Type - Responsive
+                          if (isWideScreen)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: DropdownButtonFormField<String>(
+                                    value: _selectedAdviceType,
+                                    isExpanded: true,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Type of Advice Needed *',
+                                      hintText: 'Select advice type',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.help_outline),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    ),
+                                    items: _adviceTypes.map((String type) {
+                                      return DropdownMenuItem<String>(
+                                        value: type,
+                                        child: _buildDropdownMenuItem(type),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      setState(() {
+                                        _selectedAdviceType = newValue;
+                                      });
+                                    },
+                                    validator: (value) {
+                                      if (value == null || value.isEmpty) {
+                                        return 'Please select advice type';
+                                      }
+                                      return null;
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextFormField(
+                                    controller: _visaTypeController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Preferred Visa Type',
+                                      hintText: 'e.g., Student Visa, Work Permit',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.assignment),
+                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Column(
+                              children: [
+                                DropdownButtonFormField<String>(
+                                  value: _selectedAdviceType,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Type of Advice Needed *',
+                                    hintText: 'Select advice type',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.help_outline),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                  ),
+                                  items: _adviceTypes.map((String type) {
+                                    return DropdownMenuItem<String>(
+                                      value: type,
+                                      child: _buildDropdownMenuItem(type),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      _selectedAdviceType = newValue;
+                                    });
+                                  },
+                                  validator: (value) {
+                                    if (value == null || value.isEmpty) {
+                                      return 'Please select advice type';
+                                    }
+                                    return null;
+                                  },
+                                ),
+                                const SizedBox(height: 12),
+                                TextFormField(
+                                  controller: _visaTypeController,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Preferred Visa Type',
+                                    hintText: 'e.g., Student Visa, Work Permit',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.assignment),
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          
+                          const SizedBox(height: 12),
+                          
+                          // Timeline Dropdown - Full width
+                          DropdownButtonFormField<String>(
+                            value: _selectedTimeline,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Preferred Timeline',
+                              hintText: 'Select your timeline',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.schedule),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                            items: _timelineOptions.map((String timeline) {
+                              return DropdownMenuItem<String>(
+                                value: timeline,
+                                child: _buildDropdownMenuItem(timeline),
+                              );
+                            }).toList(),
+                            onChanged: (String? newValue) {
+                              setState(() {
+                                _selectedTimeline = newValue;
+                              });
+                            },
+                          ),
+                          
+                          const SizedBox(height: 20),
+
+                          Text(
+                            'Purpose of Immigration',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          
+                          TextFormField(
+                            controller: _purposeController,
+                            maxLines: 3,
+                            maxLength: 120,
+                            decoration: InputDecoration(
+                              labelText: 'Purpose of Immigration (Optional)',
+                              hintText: 'Describe your purpose for immigration (up to 120 characters)',
+                              border: const OutlineInputBorder(),
+                              alignLabelWithHint: true,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                              counterText: '$_purposeCharCount/120 characters',
+                              counterStyle: TextStyle(
+                                color: _purposeCharCount > 120 ? Colors.red : Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            onChanged: _updatePurposeCharCount,
+                          ),
+                          
+                          const SizedBox(height: 24),
+
+                          // Buttons - Responsive
+                          if (isWideScreen)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: _isSubmitting ? null : _submitForm,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF1E88E5),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      elevation: 2,
+                                    ),
+                                    child: _isSubmitting
+                                        ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(Icons.email, size: 20),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Send Request',
+                                                style: GoogleFonts.inter(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: OutlinedButton(
+                                    onPressed: _resetForm,
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      side: const BorderSide(color: Color(0xFF1E88E5)),
+                                    ),
+                                    child: Text(
+                                      'Reset Form',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                        color: const Color(0xFF1E88E5),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Column(
+                              children: [
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: ElevatedButton(
+                                    onPressed: _isSubmitting ? null : _submitForm,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFF1E88E5),
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      elevation: 2,
+                                    ),
+                                    child: _isSubmitting
+                                        ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(Icons.email, size: 20),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Send Request',
+                                                style: GoogleFonts.inter(
+                                                  fontWeight: FontWeight.w600,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton(
+                                    onPressed: _resetForm,
+                                    style: OutlinedButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      side: const BorderSide(color: Color(0xFF1E88E5)),
+                                    ),
+                                    child: Text(
+                                      'Reset Form',
+                                      style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                        color: const Color(0xFF1E88E5),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                          const SizedBox(height: 16),
+
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey[300]!),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '📧 How It Works:',
+                                  style: GoogleFonts.inter(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  '• Your request is sent directly to our team\n'
+                                  '• No manual email sending required\n'
+                                  '• Team will contact you within 24 hours\n'
+                                  '• Fallback email option available if needed',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    color: Colors.grey[700],
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

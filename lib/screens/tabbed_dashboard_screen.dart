@@ -13,8 +13,6 @@ import 'package:jrr_immigration_app/screens/flights_screen.dart';
 import 'package:jrr_immigration_app/screens/accommodation_screen.dart';
 import 'package:jrr_immigration_app/screens/profile_screen.dart';
 
-
-
 class TabbedDashboardScreen extends StatefulWidget {
   const TabbedDashboardScreen({super.key});
 
@@ -23,14 +21,485 @@ class TabbedDashboardScreen extends StatefulWidget {
 }
 
 class _TabbedDashboardScreenState extends State<TabbedDashboardScreen> {
-  // Original Dashboard Colors (from your old dashboard)
-  final Color _primaryBlue = const Color(0xFF1E88E5); // Exact blue from old dashboard
-  final Color _backgroundColor = const Color(0xFFF8F9FA); // Light grey background
-  final Color _cardColor = Colors.white;  
-  final Color _textSecondary = const Color(0xFF666666); // Grey text
+  // Color Constants
+  static const Color _primaryBlue = Color(0xFF1E88E5);
+  static const Color _backgroundColor = Color(0xFFF8F9FA);
+  static const Color _cardColor = Colors.white;
+  static const Color _textSecondary = Color(0xFF666666);
 
-    // Privacy Policy & Terms Content
-    final String _privacyPolicyContent = '''
+  // Service Items Data
+  final List<ServiceSection> _serviceSections = [
+    ServiceSection(
+      title: 'Visa Services',
+      services: [
+        ServiceItem(
+          icon: Icons.assignment,
+          title: 'Apply Visa',
+          subtitle: 'New application',
+          route: _NavigationRoutes.visa,
+        ),
+        ServiceItem(
+          icon: Icons.track_changes,
+          title: 'Track Status',
+          subtitle: 'Check application',
+          route: _NavigationRoutes.trackStatus,
+        ),
+        ServiceItem(
+          icon: Icons.warning,
+          title: 'Visa Refusal',
+          subtitle: 'Get assistance',
+          route: _NavigationRoutes.visaRefusal,
+        ),
+      ],
+    ),
+    ServiceSection(
+      title: 'Travel Services',
+      services: [
+        ServiceItem(
+          icon: Icons.flight,
+          title: 'Flight Booking',
+          subtitle: 'Book best fares',
+          route: _NavigationRoutes.flights,
+        ),
+        ServiceItem(
+          icon: Icons.hotel,
+          title: 'Accommodation',
+          subtitle: 'Hotels & apartments',
+          route: _NavigationRoutes.accommodation,
+        ),
+        ServiceItem(
+          icon: Icons.security,
+          title: 'Travel Insurance',
+          subtitle: 'Get protected',
+          route: _NavigationRoutes.insurance,
+        ),
+      ],
+    ),
+    ServiceSection(
+      title: 'Financial Services',
+      services: [
+        ServiceItem(
+          icon: Icons.currency_exchange,
+          title: 'Forex Services',
+          subtitle: 'Currency exchange',
+          route: _NavigationRoutes.forex,
+        ),
+      ],
+    ),
+    ServiceSection(
+      title: 'Support Services',
+      services: [
+        ServiceItem(
+          icon: Icons.lightbulb_outline,
+          title: 'Immigration Advice',
+          subtitle: 'Expert consultation',
+          route: _NavigationRoutes.immigrationAdvice,
+        ),
+        ServiceItem(
+          icon: Icons.support_agent,
+          title: 'AI Assistant',
+          subtitle: 'Instant help',
+          route: _NavigationRoutes.aiAssistant,
+        ),
+      ],
+    ),
+    ServiceSection(
+      title: 'Legal & Support',
+      services: [
+        ServiceItem(
+          icon: Icons.privacy_tip,
+          title: 'Privacy Policy',
+          subtitle: 'Data protection info',
+          route: _NavigationRoutes.privacyPolicy,
+        ),
+        ServiceItem(
+          icon: Icons.description,
+          title: 'Terms & Conditions',
+          subtitle: 'App usage terms',
+          route: _NavigationRoutes.termsAndConditions,
+        ),
+      ],
+    ),
+  ];
+
+  // Footer Items
+  final List<FooterItem> _footerItems = [
+    FooterItem(icon: Icons.home, label: 'Home', route: _NavigationRoutes.home),
+    FooterItem(icon: Icons.assignment, label: 'Visa', route: _NavigationRoutes.visa),
+    FooterItem(icon: Icons.flight, label: 'Flights', route: _NavigationRoutes.flights),
+    FooterItem(icon: Icons.security, label: 'Insurance', route: _NavigationRoutes.insurance),
+    FooterItem(icon: Icons.person, label: 'Profile', route: _NavigationRoutes.profile),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: _backgroundColor,
+      floatingActionButton: _buildFloatingActionButton(),
+      body: _buildBody(),
+      bottomNavigationBar: _buildBottomNavigationBar(),
+    );
+  }
+
+  // Build Methods
+  Widget _buildBody() {
+    return SingleChildScrollView(
+      child: Column(
+        children: [
+          _buildHeader(),
+          _buildContent(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildLogo(),
+              _buildWelcomeMessage(),
+              _buildLogoutButton(),
+            ],
+          ),
+          _buildHeaderDivider(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogo() {
+    return SizedBox(
+      width: 120,
+      height: 40,
+      child: Image.asset(
+        'assets/images/JRR Logo.png',
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+
+  Widget _buildWelcomeMessage() {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            'Welcome to JRR Go!',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: _primaryBlue,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'We work beyond borders',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: _textSecondary,
+              fontSize: 14,
+            ),
+          ),
+          Text(
+            "India's Only Legally Backed Immigration & Travel App",
+            style: GoogleFonts.inter(
+              color: _textSecondary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogoutButton() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _primaryBlue,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: TextButton.icon(
+        onPressed: () => _handleLogout(context),
+        icon: const Icon(Icons.logout, size: 16, color: Colors.white),
+        label: Text(
+          'Logout',
+          style: GoogleFonts.inter(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        style: TextButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderDivider() {
+    return Container(
+      height: 2,
+      color: _primaryBlue,
+      margin: const EdgeInsets.only(top: 16),
+    );
+  }
+
+  Widget _buildContent() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: _serviceSections.map(_buildServiceSection).toList(),
+      ),
+    );
+  }
+
+  Widget _buildServiceSection(ServiceSection section) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle(section.title),
+        const SizedBox(height: 16),
+        _buildServiceRow(section.services),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Text(
+      title,
+      style: GoogleFonts.inter(
+        fontSize: 18,
+        fontWeight: FontWeight.w700,
+        color: _primaryBlue,
+      ),
+    );
+  }
+
+  Widget _buildServiceRow(List<ServiceItem> services) {
+    return Row(
+      children: services.asMap().entries.map((entry) {
+        final index = entry.key;
+        final service = entry.value;
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: index < services.length - 1 ? 12 : 0),
+            child: _buildServiceItem(service),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildServiceItem(ServiceItem service) {
+    return Card(
+      elevation: 1,
+      shadowColor: Colors.black12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      child: InkWell(
+        onTap: () => _handleServiceTap(context, service.route),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: _cardColor,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(service.icon, size: 32, color: _primaryBlue),
+              const SizedBox(height: 8),
+              Text(
+                service.title,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: _primaryBlue,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                service.subtitle,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  color: _textSecondary,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFloatingActionButton() {
+    return FloatingActionButton(
+      onPressed: () => AIAssistantPopup.show(context),
+      backgroundColor: _primaryBlue,
+      foregroundColor: Colors.white,
+      elevation: 2,
+      child: const Icon(Icons.support_agent, size: 20),
+    );
+  }
+
+  Widget _buildBottomNavigationBar() {
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: _footerItems.map(_buildFooterButton).toList(),
+      ),
+    );
+  }
+
+  Widget _buildFooterButton(FooterItem item) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _handleFooterTap(context, item.route),
+        borderRadius: BorderRadius.circular(8),
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(item.icon, color: _primaryBlue, size: 20),
+              const SizedBox(height: 4),
+              Text(
+                item.label,
+                style: GoogleFonts.inter(
+                  color: _primaryBlue,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Navigation Handlers
+  void _handleServiceTap(BuildContext context, String route) {
+    switch (route) {
+      case _NavigationRoutes.visa:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const VisaScreen()));
+        break;
+      case _NavigationRoutes.trackStatus:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const track_screen.TrackStatusScreen()));
+        break;
+      case _NavigationRoutes.visaRefusal:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const VisaRefusalScreen()));
+        break;
+      case _NavigationRoutes.flights:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const FlightsScreen()));
+        break;
+      case _NavigationRoutes.accommodation:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const AccommodationScreen()));
+        break;
+      case _NavigationRoutes.insurance:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const InsuranceScreen()));
+        break;
+      case _NavigationRoutes.forex:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ForexScreen()));
+        break;
+      case _NavigationRoutes.immigrationAdvice:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ImmigrationAdviceScreen()));
+        break;
+      case _NavigationRoutes.aiAssistant:
+        AIAssistantPopup.show(context);
+        break;
+      case _NavigationRoutes.privacyPolicy:
+        _showPrivacyPolicy(context);
+        break;
+      case _NavigationRoutes.termsAndConditions:
+        _showTermsAndConditions(context);
+        break;
+      case _NavigationRoutes.profile:
+        Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
+        break;
+    }
+  }
+
+  void _handleFooterTap(BuildContext context, String route) {
+    if (route == _NavigationRoutes.home) {
+      // Already on home, do nothing or scroll to top
+      return;
+    }
+    _handleServiceTap(context, route);
+  }
+
+  // Dialog Methods
+  void _showPrivacyPolicy(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Privacy Policy'),
+        content: SingleChildScrollView(child: Text(_privacyPolicyContent)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTermsAndConditions(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terms & Conditions'),
+        content: SingleChildScrollView(child: Text(_termsAndConditionsContent)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Logout Handler
+  Future<void> _handleLogout(BuildContext context) async {
+    final authService = AuthService();
+    try {
+      await authService.signOut();
+      if (context.mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      }
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Logout failed'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Privacy Policy Content (same as original)
+  final String _privacyPolicyContent = '''
 Privacy Policy
 
 Effective Date: XX-Nov-2025
@@ -167,7 +636,8 @@ Disputes shall be resolved by courts in Hyderabad, Telangana.
 📌 By using our app, you acknowledge you have read, understood, and agreed to this Privacy Policy.
 ''';
 
-final String _termsAndConditionsContent = '''
+  // Terms & Conditions Content (same as original)
+  final String _termsAndConditionsContent = '''
 Terms & Conditions --- JRR App
 
 Effective Date: XX-Nov-2025
@@ -297,482 +767,55 @@ Gaddiannaram, Hyderabad — 500060, India
 Email: jrrindia@gmail.com
 Phone: +91 7893638689
 ''';
-  
-
-
-
-
-
-  // Navigation methods
-  void _navigateToVisa(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const VisaScreen()));
-  }
-
-  void _navigateToInsurance(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const InsuranceScreen()));
-  }
-
-  void _navigateToImmigrationAdvice(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const ImmigrationAdviceScreen()));
-  }
-
-  void _navigateToFlights(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const FlightsScreen()));
-  }
-
-  void _navigateToAccommodation(BuildContext context) {
-    Navigator.push(context, MaterialPageRoute(builder: (context) => const AccommodationScreen()));
-  }
-
-  void _showPrivacyPolicy(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Privacy Policy'),
-      content: SingleChildScrollView(
-        child: Text(_privacyPolicyContent),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    ),
-  );
 }
 
-void _showTermsAndConditions(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Terms & Conditions'),
-      content: SingleChildScrollView(
-        child: Text(_termsAndConditionsContent),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Close'),
-        ),
-      ],
-    ),
-  );
+// Data Models
+class ServiceSection {
+  final String title;
+  final List<ServiceItem> services;
+
+  ServiceSection({required this.title, required this.services});
 }
-  
 
-  Future<void> _logout(BuildContext context) async {
-    final authService = AuthService();
-    try {
-      await authService.signOut();
-      if (context.mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
-    } catch (error) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Logout failed'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
+class ServiceItem {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String route;
 
-  Widget _buildServiceItem({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Expanded(
-      child: Card(
-        elevation: 1,
-        shadowColor: Colors.black12,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            //height: 120,
-            decoration: BoxDecoration(
-              color: _cardColor,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(icon, size: 32, color: _primaryBlue),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: _primaryBlue,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: _textSecondary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16, top: 8),
-      child: Text(
-        title,
-        style: GoogleFonts.inter(
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-          color: _primaryBlue,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFooterButton(String text, IconData icon, VoidCallback onTap) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Container(
-          padding: const EdgeInsets.all(8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: _primaryBlue, size: 20),
-              const SizedBox(height: 4),
-              Text(
-                text,
-                style: GoogleFonts.inter(
-                  color: _primaryBlue,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    backgroundColor: _backgroundColor,
-    floatingActionButton: FloatingActionButton(
-      onPressed: () => AIAssistantPopup.show(context),
-      backgroundColor: _primaryBlue,
-      foregroundColor: Colors.white,
-      elevation: 2,
-      child: const Icon(Icons.support_agent, size: 20),
-    ),
-    body: SingleChildScrollView(
-      child: Column(
-        children: [
-          // HEADER - Clean like old dashboard
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            child: Column(
-              children: [
-                // Header Row - Exactly like old dashboard
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Logo - Using your JRR logo
-                    SizedBox(
-                      width: 120,
-                      height: 40,
-                      child: Image.asset(
-                        'assets/images/JRR Logo.png',
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    
-                    // Welcome Message - Centered
-                    Expanded(
-                      child: Column(
-                        children: [
-                          Text(
-                            'Welcome to JRR Go!',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              color: _primaryBlue,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'We work beyond borders',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              color: _textSecondary,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            "India's Only Legally Backed Immigration & Travel App",
-                            style: GoogleFonts.inter(
-                            color: _textSecondary,
-                            fontSize: 12,
-                           ),
-                         ),
-                        ],
-                      ),
-                    ),
-                    
-                    // Logout Button 
-                    Container(
-                      decoration: BoxDecoration(
-                        color: _primaryBlue,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: TextButton.icon(
-                        onPressed: () => _logout(context),
-                        icon: const Icon(Icons.logout, size: 16, color: Colors.white),
-                        label: Text(
-                          'Logout',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                
-                // Blue bottom line - Exactly like old dashboard
-                Container(
-                  height: 2,
-                  color: _primaryBlue,
-                  margin: const EdgeInsets.only(top: 16),
-                ),
-              ],
-            ),
-          ),
-
-          // MAIN CONTENT - Clean layout like old dashboard
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // VISA SERVICES SECTION
-                _buildSectionTitle('Visa Services'),
-                
-                // Single Row - Only 3 visa services (removed Upload Documents, Application History, Visa Requirements)
-                Row(
-                  children: [
-                    _buildServiceItem(
-                      icon: Icons.assignment,
-                      title: 'Apply Visa',
-                      subtitle: 'New application',
-                      onTap: () => _navigateToVisa(context),
-                    ),
-                    const SizedBox(width: 12),
-                    _buildServiceItem(
-                      icon: Icons.track_changes,
-                      title: 'Track Status',
-                      subtitle: 'Check application',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const track_screen.TrackStatusScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    _buildServiceItem(
-                      icon: Icons.warning,
-                      title: 'Visa Refusal',
-                      subtitle: 'Get assistance',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const VisaRefusalScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // TRAVEL SERVICES SECTION
-                _buildSectionTitle('Travel Services'),
-                
-                // Single Row - Only 3 main travel services
-                Row(
-                  children: [
-                    _buildServiceItem(
-                      icon: Icons.flight,
-                      title: 'Flight Booking',
-                      subtitle: 'Book best fares',
-                      onTap: () => _navigateToFlights(context),
-                    ),
-                    const SizedBox(width: 12),
-                    _buildServiceItem(
-                      icon: Icons.hotel,
-                      title: 'Accommodation',
-                      subtitle: 'Hotels & apartments',
-                      onTap: () => _navigateToAccommodation(context),
-                    ),
-                    const SizedBox(width: 12),
-                    _buildServiceItem(
-                      icon: Icons.security,
-                      title: 'Travel Insurance',
-                      subtitle: 'Get protected',
-                      onTap: () => _navigateToInsurance(context),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // FINANCIAL SERVICES SECTION
-                _buildSectionTitle('Financial Services'),
-                
-                // Single Row - Only Forex Services
-                Row(
-                  children: [
-                    _buildServiceItem(
-                      icon: Icons.currency_exchange,
-                      title: 'Forex Services',
-                      subtitle: 'Currency exchange',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ForexScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(child: SizedBox()),
-                    const SizedBox(width: 12),
-                    const Expanded(child: SizedBox()),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // SUPPORT SERVICES SECTION
-                _buildSectionTitle('Support Services'),
-                
-                // Single Row - Only 2 main support services
-                Row(
-                  children: [
-                    _buildServiceItem(
-                      icon: Icons.lightbulb_outline,
-                      title: 'Immigration Advice',
-                      subtitle: 'Expert consultation',
-                      onTap: () => _navigateToImmigrationAdvice(context),
-                    ),
-                    const SizedBox(width: 12),
-                    _buildServiceItem(
-                      icon: Icons.support_agent,
-                      title: 'AI Assistant',
-                      subtitle: 'Instant help',
-                      onTap: () => AIAssistantPopup.show(context),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(child: SizedBox()),
-                  ],
-                ),
-
-                const SizedBox(height: 24),
-
-                // LEGAL & SUPPORT SECTION - NOW PROPERLY ALIGNED
-                _buildSectionTitle('Legal & Support'),
-                
-                // Single Row - Privacy Policy and Terms & Conditions
-                Row(
-                  children: [
-                    _buildServiceItem(
-                      icon: Icons.privacy_tip,
-                      title: 'Privacy Policy',
-                      subtitle: 'Data protection info',
-                      onTap: () => _showPrivacyPolicy(context),
-                    ),
-                    const SizedBox(width: 12),
-                    _buildServiceItem(
-                      icon: Icons.description,
-                      title: 'Terms & Conditions',
-                      subtitle: 'App usage terms',
-                      onTap: () => _showTermsAndConditions(context),
-                    ),
-                    const SizedBox(width: 12),
-                    const Expanded(child: SizedBox()),
-                  ],
-                ),
-
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-
-    // FOOTER - Simple like old dashboard
-    bottomNavigationBar: Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildFooterButton('Home', Icons.home, () {}),
-          _buildFooterButton('Visa', Icons.assignment, () => _navigateToVisa(context)),
-          _buildFooterButton('Flights', Icons.flight, () => _navigateToFlights(context)),
-          _buildFooterButton('Insurance', Icons.security, () => _navigateToInsurance(context)),
-          _buildFooterButton('Profile', Icons.person, () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const ProfileScreen(),
-              ),
-            );
-          }),
-        ],
-      ),
-    ),
-  );
+  ServiceItem({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.route,
+  });
 }
-  
+
+class FooterItem {
+  final IconData icon;
+  final String label;
+  final String route;
+
+  FooterItem({
+    required this.icon,
+    required this.label,
+    required this.route,
+  });
+}
+
+// Navigation Routes Constants
+class _NavigationRoutes {
+  static const String home = 'home';
+  static const String visa = 'visa';
+  static const String trackStatus = 'track_status';
+  static const String visaRefusal = 'visa_refusal';
+  static const String flights = 'flights';
+  static const String accommodation = 'accommodation';
+  static const String insurance = 'insurance';
+  static const String forex = 'forex';
+  static const String immigrationAdvice = 'immigration_advice';
+  static const String aiAssistant = 'ai_assistant';
+  static const String privacyPolicy = 'privacy_policy';
+  static const String termsAndConditions = 'terms_and_conditions';
+  static const String profile = 'profile';
 }

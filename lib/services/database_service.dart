@@ -1,6 +1,7 @@
 // lib/services/database_service.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:developer' as developer;
+import 'package:flutter/foundation.dart';
 
 class DatabaseService {
   static final SupabaseClient _client = Supabase.instance.client;
@@ -292,6 +293,31 @@ static Future<Map<String, dynamic>> createPayment({
       throw Exception('Failed to fetch payment: $e');
     }
   }
+
+  // Add to DatabaseService class
+static Future<void> savePaymentReceipt({
+  required String applicationId,
+  required String receiptUrl,
+  required String fileName,
+  required int fileSize,
+  required DateTime uploadDate,
+}) async {
+  try {
+    final client = Supabase.instance.client;
+    
+    await client.from('payment_receipts').insert({
+      'application_id': applicationId,
+      'receipt_url': receiptUrl,
+      'file_name': fileName,
+      'file_size': fileSize,
+      'uploaded_at': uploadDate.toIso8601String(),
+      'created_at': DateTime.now().toIso8601String(),
+    });
+  } catch (e) {
+    debugPrint('Error saving payment receipt: $e');
+    rethrow;
+  }
+}
 
   // ===========================================================================
   // DOCUMENT METHODS

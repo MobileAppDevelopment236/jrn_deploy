@@ -1,7 +1,7 @@
 // FIXED: supabase_storage_service.dart
 
 import 'dart:async';
-import 'package:flutter/foundation.dart'; // For debugPrint
+import 'package:flutter/foundation.dart'; 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -327,6 +327,115 @@ class SupabaseStorageService {
     }
   }
 
+ // ===========================================================================
+// NEW PAYMENT RECEIPTS BUCKET FUNCTIONALITY - ADD THIS SECTION
+// ===========================================================================
+
+/// Upload payment receipt to dedicated payment-receipts bucket
+static Future<String> uploadPaymentReceipt({
+  required String fileName,
+  required Uint8List fileBytes,
+  required String applicationId,
+  int maxRetries = 3,
+}) async {
+  int attempt = 0;
+
+  while (attempt <= maxRetries) {
+    try {
+      debugPrint('🔄 Uploading payment receipt: $fileName (Attempt ${attempt + 1})');
+
+      // Create unique file path for payment receipts
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final safeFileName = _sanitizeFileName(fileName);
+      final filePath = 'receipts/$applicationId/${timestamp}_${_generateUniqueId()}_$safeFileName';
+
+      // Upload to PAYMENT-RECEIPTS bucket (or use VISA-DOCUMENTS if preferred)
+      final uploadFuture = _client.storage
+          .from('VISA-DOCUMENTS') // Using same bucket as documents for consistency
+          .uploadBinary(filePath, fileBytes);
+
+      await uploadFuture.timeout(
+        const Duration(seconds: 45),
+        onTimeout: () {
+          throw TimeoutException('Payment receipt upload timed out for $fileName');
+        },
+      );
+
+      // Get public URL
+      final String publicUrl = _client.storage
+          .from('VISA-DOCUMENTS')
+          .getPublicUrl(filePath);
+
+      debugPrint('✅ Successfully uploaded payment receipt: $fileName');
+      debugPrint('📎 Receipt URL: $publicUrl');
+
+      return publicUrl;
+    } on TimeoutException catch (e) {
+      debugPrint('⏰ Timeout uploading payment receipt $fileName: $e');
+      attempt++;
+      if (attempt > maxRetries) {
+        rethrow;
+      }
+      await Future.delayed(Duration(seconds: attempt * 2));
+    } on StorageException catch (e) {
+      debugPrint('📦 Storage error uploading payment receipt $fileName: $e');
+      
+      // If bucket doesn't exist, provide clear instructions
+      if (e.message?.contains('Bucket not found') == true) {
+        debugPrint('❌ PAYMENT-RECEIPTS bucket not found. Please create it in Supabase dashboard.');
+        debugPrint('💡 Create bucket named: PAYMENT-RECEIPTS in Storage section');
+      }
+      
+      attempt++;
+      if (attempt > maxRetries) {
+        throw Exception('Storage error for payment receipt $fileName: ${e.message}');
+      }
+      await Future.delayed(Duration(seconds: attempt * 2));
+    } catch (e) {
+      debugPrint('❌ Error uploading payment receipt $fileName: $e');
+      attempt++;
+      if (attempt > maxRetries) {
+        throw Exception('Failed to upload payment receipt $fileName after $maxRetries attempts: ${e.toString()}');
+      }
+      await Future.delayed(Duration(seconds: attempt * 2));
+    }
+  }
+
+  throw Exception('Unexpected error in uploadPaymentReceipt');
+}
+
+/// Test payment receipts bucket connectivity
+static Future<void> testPaymentReceiptsBucket() async {
+  try {
+    debugPrint('🔍 Testing payment receipts upload functionality...');
+    
+    // Test small file upload
+    final testBytes = Uint8List.fromList([80, 65, 89, 77, 69, 78, 84]); // "PAYMENT"
+    try {
+      final testUrl = await uploadPaymentReceipt(
+        fileName: 'test_receipt.jpg',
+        fileBytes: testBytes,
+        applicationId: 'test-payment',
+        maxRetries: 1,
+      );
+      debugPrint('✅ Payment receipt test upload successful: $testUrl');
+      
+      // Try to delete test file
+      try {
+        await _client.storage.from('VISA-DOCUMENTS').remove(['receipts/test-payment/test_receipt.jpg']);
+        debugPrint('✅ Test receipt cleaned up');
+      } catch (e) {
+        debugPrint('⚠️ Test receipt cleanup failed: $e');
+      }
+    } catch (e) {
+      debugPrint('❌ Payment receipt test upload failed: $e');
+      debugPrint('💡 Please ensure VISA-DOCUMENTS bucket exists in Supabase Storage');
+    }
+    
+  } catch (e) {
+    debugPrint('💥 Payment receipts test failed: $e');
+  }
+}
   /// Fallback: Open device email app
   static Future<bool> _openDeviceEmailApp({
     required String subject,
@@ -388,4 +497,5 @@ class SupabaseStorageService {
     debugPrint('CC: sreeniielts@gmail.com, gayatrilakshmibhavani@gmail.com');
     debugPrint('=' * 70);
   }
+  
 }

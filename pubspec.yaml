@@ -28,6 +28,8 @@ dependencies:
   flutter_secure_storage: ^8.0.0
   shared_preferences: ^2.2.2
   sign_in_with_apple: ^7.0.1
+  clipboard: ^0.1.3
+  
 
 dev_dependencies:
   flutter_test:
@@ -38,5 +40,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/images/JRRupi_qr_code.png
+    - assets/images/JRR Logo.png    
     - assets/icons/
     - .env

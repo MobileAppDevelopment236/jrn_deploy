@@ -43,6 +43,7 @@ class AuthService {
         email: email.trim(),
         password: password,
         data: metadata,
+        emailRedirectTo: 'jrr-immigration://auth-callback',
       );
       
       return response.user;

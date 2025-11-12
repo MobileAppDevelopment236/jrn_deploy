@@ -102,7 +102,7 @@ class _TrackStatusScreenState extends State<TrackStatusScreen> {
     );
   }
 
-  // Replace your _buildSearchSection() method with this compact version:
+  
 
 Widget _buildSearchSection() {
   return Card(
@@ -124,86 +124,167 @@ Widget _buildSearchSection() {
             ),
             const SizedBox(height: 12),
             
-            // Compact form - Application ID and Email in one row
-            Row(
-              children: [
-                // Application ID Field
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    controller: _applicationIdController,
-                    decoration: const InputDecoration(
-                      labelText: 'Application ID',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Required';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Email Field
-                Expanded(
-                  flex: 2,
-                  child: TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Required';
-                      }
-                      if (!_isValidEmail(value)) {
-                        return 'Invalid email';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                
-                const SizedBox(width: 12),
-                
-                // Search Button
-                Expanded(
-                  flex: 1,
-                  child: SizedBox(
-                    height: 50, // Match field height
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _searchApplication,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1E88E5),
-                        foregroundColor: Colors.white,
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            )
-                          : Text(
-                              'Search',
-                              style: GoogleFonts.inter(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                    ),
-                  ),
-                ),
-              ],
+            // Responsive form layout
+LayoutBuilder(
+  builder: (context, constraints) {
+    final bool isWideScreen = constraints.maxWidth > 600;
+    
+    if (isWideScreen) {
+      // Wide screen - horizontal layout
+      return Row(
+        children: [
+          // Application ID Field
+          Expanded(
+            child: TextFormField(
+              controller: _applicationIdController,
+              decoration: const InputDecoration(
+                labelText: 'Application ID',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                isDense: true, // Reduces height slightly to prevent cutting
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Required';
+                }
+                return null;
+              },
             ),
+          ),
+          
+          const SizedBox(width: 12),
+          
+          // Email Field
+          Expanded(
+            child: TextFormField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                isDense: true, // Reduces height slightly to prevent cutting
+              ),
+              keyboardType: TextInputType.emailAddress,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Required';
+                }
+                if (!_isValidEmail(value)) {
+                  return 'Invalid email';
+                }
+                return null;
+              },
+            ),
+          ),
+          
+          const SizedBox(width: 12),
+          
+          // Search Button
+          SizedBox(
+            width: 100, // Fixed width for button
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _searchApplication,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E88E5),
+                foregroundColor: Colors.white,
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Search',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Narrow screen - vertical layout
+      return Column(
+        children: [
+          // Application ID Field
+          TextFormField(
+            controller: _applicationIdController,
+            decoration: const InputDecoration(
+              labelText: 'Application ID',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Required';
+              }
+              return null;
+            },
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Email Field
+          TextFormField(
+            controller: _emailController,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Required';
+              }
+              if (!_isValidEmail(value)) {
+                return 'Invalid email';
+              }
+              return null;
+            },
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Search Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _searchApplication,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E88E5),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : Text(
+                      'Search',
+                      style: GoogleFonts.inter(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      );
+    }
+  },
+),
+            
             
             // Error messages display area
             if (_formKey.currentState?.validate() == false) ...[
