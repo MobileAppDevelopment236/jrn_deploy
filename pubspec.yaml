@@ -40,7 +40,5 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
-    - assets/images/JRRupi_qr_code.png
-    - assets/images/JRR Logo.png    
     - assets/icons/
     - .env

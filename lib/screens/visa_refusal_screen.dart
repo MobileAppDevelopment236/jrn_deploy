@@ -1,11 +1,13 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:jrr_immigration_app/services/supabase_storage_service.dart';
 
-// Date formatter for email
+// Date formatters
 final _emailDateFormatter = DateFormat('MMMM dd, yyyy \'at\' hh:mm a', 'en_IN');
+final _idDateFormatter = DateFormat('yyyyMMdd', 'en_IN');
 
 class VisaRefusalScreen extends StatefulWidget {
   const VisaRefusalScreen({super.key});
@@ -37,16 +39,8 @@ class _VisaRefusalScreenState extends State<VisaRefusalScreen> {
   // Loading state
   bool _isLoading = false;
 
-  // Validation flags
-  bool _firstNameValidated = false;
-  bool _lastNameValidated = false;
-  bool _emailValidated = false;
-  bool _phoneValidated = false;
-  bool _appliedCountryValidated = false;
-  bool _visaTypeValidated = false;
-  bool _applicationDateValidated = false;
-  bool _refusalDateValidated = false;
-  bool _refusalReasonValidated = false;
+  // Application ID
+  String _applicationId = '';
 
   final List<String> _visaCategories = [
     'Tourist',
@@ -64,6 +58,35 @@ class _VisaRefusalScreenState extends State<VisaRefusalScreen> {
     'Appeal in Progress',
     'Already Appealed - Failed'
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _generateApplicationId();
+  }
+
+  // Generate unique application ID
+  void _generateApplicationId() {
+    final now = DateTime.now();
+    final datePart = _idDateFormatter.format(now);
+    final timePart = DateFormat('HHmmss').format(now);
+    final randomPart = _generateRandomString(4).toUpperCase();
+    
+    setState(() {
+      _applicationId = 'VR-$datePart-$timePart-$randomPart';
+    });
+  }
+
+  String _generateRandomString(int length) {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final random = Random();
+    return String.fromCharCodes(
+      Iterable.generate(
+        length,
+        (_) => chars.codeUnitAt(random.nextInt(chars.length)),
+      ),
+    );
+  }
 
   @override
   void dispose() {
@@ -137,19 +160,6 @@ class _VisaRefusalScreenState extends State<VisaRefusalScreen> {
   }
 
   void _submitForm() async {
-    // Mark all fields as validated
-    setState(() {
-      _firstNameValidated = true;
-      _lastNameValidated = true;
-      _emailValidated = true;
-      _phoneValidated = true;
-      _appliedCountryValidated = true;
-      _visaTypeValidated = true;
-      _applicationDateValidated = true;
-      _refusalDateValidated = true;
-      _refusalReasonValidated = true;
-    });
-
     if (_formKey.currentState!.validate()) {
       if (_applicationDateController.text.isNotEmpty && _refusalDateController.text.isNotEmpty) {
         final appDate = _parseDate(_applicationDateController.text);
@@ -217,7 +227,8 @@ class _VisaRefusalScreenState extends State<VisaRefusalScreen> {
     return '''
 **VISA REFUSAL ASSISTANCE REQUEST - CLIENT SUBMISSION**
 
-**SUBMISSION DETAILS**
+**APPLICATION DETAILS**
+• Application ID: $_applicationId
 • Submitted: ${_emailDateFormatter.format(now)}
 • Service Type: Visa Refusal Assistance
 
@@ -247,6 +258,7 @@ Please review this visa refusal case and provide assistance with reapplication o
 
 ---
 **ACTION REQUIRED:** Please contact the client within 24 hours to discuss next steps and assistance options.
+**REFERENCE ID:** $_applicationId
 
 Best regards,
 JRR Visa Assistance Team
@@ -260,7 +272,7 @@ JRR Visa Assistance Team
         body: body,
         toEmails: ['jrrindia@gmail.com'],
         ccEmails: ['jrrgoindia@gmail.com'],
-        applicationId: 'VISA-REFUSAL-${DateTime.now().millisecondsSinceEpoch}',
+        applicationId: _applicationId,
         receiptUrl: null,
       );
       
@@ -281,6 +293,35 @@ JRR Visa Assistance Team
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Your visa refusal assistance request has been sent to our team.'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                border: Border.all(color: Colors.blue),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Application ID: $_applicationId',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Please save this ID for future reference',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
             const Text('✓ Data sent to backend team for processing'),
             const SizedBox(height: 8),
@@ -462,7 +503,7 @@ JRR Visa Assistance Team
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '📧 You can now:',
+                    '📧 Application ID: $_applicationId',
                     style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   const SizedBox(height: 8),
@@ -512,15 +553,6 @@ JRR Visa Assistance Team
     setState(() {
       _selectedVisaCategory = null;
       _selectedAppealStatus = null;
-      _firstNameValidated = false;
-      _lastNameValidated = false;
-      _emailValidated = false;
-      _phoneValidated = false;
-      _appliedCountryValidated = false;
-      _visaTypeValidated = false;
-      _applicationDateValidated = false;
-      _refusalDateValidated = false;
-      _refusalReasonValidated = false;
     });
     _firstNameController.clear();
     _lastNameController.clear();
@@ -533,6 +565,9 @@ JRR Visa Assistance Team
     _refusalReasonController.clear();
     _previousTravelHistoryController.clear();
     _additionalNotesController.clear();
+    
+    // Generate new application ID
+    _generateApplicationId();
     
     // Close any open dialogs
     if (mounted && Navigator.canPop(context)) {
@@ -596,22 +631,51 @@ JRR Visa Assistance Team
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header Section
-                          Text(
-                            'Visa Refusal Assistance',
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                              color: const Color(0xFF1E88E5),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Complete this form for expert assistance. Our team will review your case within 24 hours.',
-                            style: GoogleFonts.inter(
-                              color: Colors.grey[600],
-                              fontSize: 14,
-                            ),
+                          // Header Section with Application ID
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Visa Refusal Assistance',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: const Color(0xFF1E88E5),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Complete this form for expert assistance. Our team will review your case within 24 hours.',
+                                      style: GoogleFonts.inter(
+                                        color: Colors.grey[600],
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                ),
+                                child: Text(
+                                  _applicationId,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
 
                           // Personal Information Section
@@ -633,20 +697,12 @@ JRR Visa Assistance Team
                                     Expanded(
                                       child: TextFormField(
                                         controller: _firstNameController,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           labelText: 'First Name *',
                                           hintText: 'As per passport',
-                                          border: const OutlineInputBorder(),
-                                          prefixIcon: const Icon(Icons.person),
-                                          errorText: _firstNameValidated && (_firstNameController.text.isEmpty || _firstNameController.text.length < 2) 
-                                              ? 'Enter valid first name'
-                                              : null,
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.person),
                                         ),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _firstNameValidated = true;
-                                          });
-                                        },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) return 'Required field';
                                           if (value.length < 2) return 'Enter valid first name';
@@ -661,20 +717,12 @@ JRR Visa Assistance Team
                                     Expanded(
                                       child: TextFormField(
                                         controller: _lastNameController,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           labelText: 'Last Name *',
                                           hintText: 'As per passport',
-                                          border: const OutlineInputBorder(),
-                                          prefixIcon: const Icon(Icons.person),
-                                          errorText: _lastNameValidated && (_lastNameController.text.isEmpty || _lastNameController.text.length < 2) 
-                                              ? 'Enter valid last name'
-                                              : null,
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.person),
                                         ),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _lastNameValidated = true;
-                                          });
-                                        },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) return 'Required field';
                                           if (value.length < 2) return 'Enter valid last name';
@@ -691,20 +739,12 @@ JRR Visa Assistance Team
                                   children: [
                                     TextFormField(
                                       controller: _firstNameController,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         labelText: 'First Name *',
                                         hintText: 'As per passport',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.person),
-                                        errorText: _firstNameValidated && (_firstNameController.text.isEmpty || _firstNameController.text.length < 2) 
-                                            ? 'Enter valid first name'
-                                            : null,
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.person),
                                       ),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _firstNameValidated = true;
-                                        });
-                                      },
                                       validator: (value) {
                                         if (value == null || value.isEmpty) return 'Required field';
                                         if (value.length < 2) return 'Enter valid first name';
@@ -717,20 +757,12 @@ JRR Visa Assistance Team
                                     const SizedBox(height: 12),
                                     TextFormField(
                                       controller: _lastNameController,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         labelText: 'Last Name *',
                                         hintText: 'As per passport',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.person),
-                                        errorText: _lastNameValidated && (_lastNameController.text.isEmpty || _lastNameController.text.length < 2) 
-                                            ? 'Enter valid last name'
-                                            : null,
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.person),
                                       ),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _lastNameValidated = true;
-                                        });
-                                      },
                                       validator: (value) {
                                         if (value == null || value.isEmpty) return 'Required field';
                                         if (value.length < 2) return 'Enter valid last name';
@@ -751,21 +783,12 @@ JRR Visa Assistance Team
                                     Expanded(
                                       child: TextFormField(
                                         controller: _emailController,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           labelText: 'Email Address *',
-                                          border: const OutlineInputBorder(),
-                                          prefixIcon: const Icon(Icons.email),
-                                          errorText: _emailValidated && _emailController.text.isNotEmpty && 
-                                              !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text)
-                                              ? 'Enter valid email'
-                                              : null,
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.email),
                                         ),
                                         keyboardType: TextInputType.emailAddress,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _emailValidated = true;
-                                          });
-                                        },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) return 'Required field';
                                           if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
@@ -779,21 +802,12 @@ JRR Visa Assistance Team
                                     Expanded(
                                       child: TextFormField(
                                         controller: _phoneController,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           labelText: 'Phone Number *',
-                                          border: const OutlineInputBorder(),
-                                          prefixIcon: const Icon(Icons.phone),
-                                          errorText: _phoneValidated && _phoneController.text.isNotEmpty && 
-                                              !RegExp(r'^[0-9+\-\s()]{10,}$').hasMatch(_phoneController.text.replaceAll(RegExp(r'[\s\-()]'), ''))
-                                              ? 'Enter valid phone'
-                                              : null,
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.phone),
                                         ),
                                         keyboardType: TextInputType.phone,
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _phoneValidated = true;
-                                          });
-                                        },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) return 'Required field';
                                           final digitsOnly = value.replaceAll(RegExp(r'[\s\-()]'), '');
@@ -810,21 +824,12 @@ JRR Visa Assistance Team
                                   children: [
                                     TextFormField(
                                       controller: _emailController,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         labelText: 'Email Address *',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.email),
-                                        errorText: _emailValidated && _emailController.text.isNotEmpty && 
-                                            !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(_emailController.text)
-                                            ? 'Enter valid email'
-                                            : null,
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.email),
                                       ),
                                       keyboardType: TextInputType.emailAddress,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _emailValidated = true;
-                                        });
-                                      },
                                       validator: (value) {
                                         if (value == null || value.isEmpty) return 'Required field';
                                         if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
@@ -836,21 +841,12 @@ JRR Visa Assistance Team
                                     const SizedBox(height: 12),
                                     TextFormField(
                                       controller: _phoneController,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         labelText: 'Phone Number *',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.phone),
-                                        errorText: _phoneValidated && _phoneController.text.isNotEmpty && 
-                                            !RegExp(r'^[0-9+\-\s()]{10,}$').hasMatch(_phoneController.text.replaceAll(RegExp(r'[\s\-()]'), ''))
-                                            ? 'Enter valid phone'
-                                            : null,
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.phone),
                                       ),
                                       keyboardType: TextInputType.phone,
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _phoneValidated = true;
-                                        });
-                                      },
                                       validator: (value) {
                                         if (value == null || value.isEmpty) return 'Required field';
                                         final digitsOnly = value.replaceAll(RegExp(r'[\s\-()]'), '');
@@ -882,20 +878,12 @@ JRR Visa Assistance Team
                                     Expanded(
                                       child: TextFormField(
                                         controller: _appliedCountryController,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           labelText: 'Applied Country *',
                                           hintText: 'e.g., USA, Canada',
-                                          border: const OutlineInputBorder(),
-                                          prefixIcon: const Icon(Icons.flag),
-                                          errorText: _appliedCountryValidated && _appliedCountryController.text.isEmpty
-                                              ? 'Required field'
-                                              : null,
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.flag),
                                         ),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _appliedCountryValidated = true;
-                                          });
-                                        },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) return 'Required field';
                                           return null;
@@ -907,21 +895,13 @@ JRR Visa Assistance Team
                                       child: TextFormField(
                                         controller: _applicationDateController,
                                         readOnly: true,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           labelText: 'Application Date *',
                                           hintText: 'Select date',
-                                          border: const OutlineInputBorder(),
-                                          prefixIcon: const Icon(Icons.calendar_today),
-                                          errorText: _applicationDateValidated && _applicationDateController.text.isEmpty
-                                              ? 'Required field'
-                                              : null,
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.calendar_today),
                                         ),
                                         onTap: () => _selectDate(context, _applicationDateController),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _applicationDateValidated = true;
-                                          });
-                                        },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) return 'Required field';
                                           return null;
@@ -934,20 +914,12 @@ JRR Visa Assistance Team
                                   children: [
                                     TextFormField(
                                       controller: _appliedCountryController,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         labelText: 'Applied Country *',
                                         hintText: 'e.g., USA, Canada',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.flag),
-                                        errorText: _appliedCountryValidated && _appliedCountryController.text.isEmpty
-                                            ? 'Required field'
-                                            : null,
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.flag),
                                       ),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _appliedCountryValidated = true;
-                                        });
-                                      },
                                       validator: (value) {
                                         if (value == null || value.isEmpty) return 'Required field';
                                         return null;
@@ -957,21 +929,13 @@ JRR Visa Assistance Team
                                     TextFormField(
                                       controller: _applicationDateController,
                                       readOnly: true,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         labelText: 'Application Date *',
                                         hintText: 'Select date',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.calendar_today),
-                                        errorText: _applicationDateValidated && _applicationDateController.text.isEmpty
-                                            ? 'Required field'
-                                            : null,
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.calendar_today),
                                       ),
                                       onTap: () => _selectDate(context, _applicationDateController),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _applicationDateValidated = true;
-                                        });
-                                      },
                                       validator: (value) {
                                         if (value == null || value.isEmpty) return 'Required field';
                                         return null;
@@ -988,20 +952,12 @@ JRR Visa Assistance Team
                                     Expanded(
                                       child: TextFormField(
                                         controller: _visaTypeController,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           labelText: 'Visa Type *',
                                           hintText: 'e.g., Tourist, Student',
-                                          border: const OutlineInputBorder(),
-                                          prefixIcon: const Icon(Icons.assignment),
-                                          errorText: _visaTypeValidated && _visaTypeController.text.isEmpty
-                                              ? 'Required field'
-                                              : null,
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.assignment),
                                         ),
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _visaTypeValidated = true;
-                                          });
-                                        },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) return 'Required field';
                                           return null;
@@ -1012,7 +968,7 @@ JRR Visa Assistance Team
                                     Expanded(
                                       child: DropdownButtonFormField<String>(
                                         value: _selectedVisaCategory,
-                                        isExpanded: true, // FIX: Added to prevent overflow
+                                        isExpanded: true,
                                         decoration: const InputDecoration(
                                           labelText: 'Visa Category',
                                           border: OutlineInputBorder(),
@@ -1044,20 +1000,12 @@ JRR Visa Assistance Team
                                   children: [
                                     TextFormField(
                                       controller: _visaTypeController,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         labelText: 'Visa Type *',
                                         hintText: 'e.g., Tourist, Student',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.assignment),
-                                        errorText: _visaTypeValidated && _visaTypeController.text.isEmpty
-                                            ? 'Required field'
-                                            : null,
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.assignment),
                                       ),
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _visaTypeValidated = true;
-                                        });
-                                      },
                                       validator: (value) {
                                         if (value == null || value.isEmpty) return 'Required field';
                                         return null;
@@ -1066,7 +1014,7 @@ JRR Visa Assistance Team
                                     const SizedBox(height: 12),
                                     DropdownButtonFormField<String>(
                                       value: _selectedVisaCategory,
-                                      isExpanded: true, // FIX: Added to prevent overflow
+                                      isExpanded: true,
                                       decoration: const InputDecoration(
                                         labelText: 'Visa Category',
                                         border: OutlineInputBorder(),
@@ -1114,14 +1062,11 @@ JRR Visa Assistance Team
                                       child: TextFormField(
                                         controller: _refusalDateController,
                                         readOnly: true,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                           labelText: 'Refusal Date *',
                                           hintText: 'Select date',
-                                          border: const OutlineInputBorder(),
-                                          prefixIcon: const Icon(Icons.calendar_today),
-                                          errorText: _refusalDateValidated && _refusalDateController.text.isEmpty
-                                              ? 'Required field'
-                                              : null,
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.calendar_today),
                                         ),
                                         onTap: () {
                                           DateTime? firstDate;
@@ -1129,11 +1074,6 @@ JRR Visa Assistance Team
                                             firstDate = _parseDate(_applicationDateController.text);
                                           }
                                           _selectDate(context, _refusalDateController, firstDate: firstDate);
-                                        },
-                                        onChanged: (value) {
-                                          setState(() {
-                                            _refusalDateValidated = true;
-                                          });
                                         },
                                         validator: (value) {
                                           if (value == null || value.isEmpty) return 'Required field';
@@ -1145,7 +1085,7 @@ JRR Visa Assistance Team
                                     Expanded(
                                       child: DropdownButtonFormField<String>(
                                         value: _selectedAppealStatus,
-                                        isExpanded: true, // FIX: Added to prevent overflow
+                                        isExpanded: true,
                                         decoration: const InputDecoration(
                                           labelText: 'Appeal Status',
                                           border: OutlineInputBorder(),
@@ -1178,14 +1118,11 @@ JRR Visa Assistance Team
                                     TextFormField(
                                       controller: _refusalDateController,
                                       readOnly: true,
-                                      decoration: InputDecoration(
+                                      decoration: const InputDecoration(
                                         labelText: 'Refusal Date *',
                                         hintText: 'Select date',
-                                        border: const OutlineInputBorder(),
-                                        prefixIcon: const Icon(Icons.calendar_today),
-                                        errorText: _refusalDateValidated && _refusalDateController.text.isEmpty
-                                            ? 'Required field'
-                                            : null,
+                                        border: OutlineInputBorder(),
+                                        prefixIcon: Icon(Icons.calendar_today),
                                       ),
                                       onTap: () {
                                         DateTime? firstDate;
@@ -1193,11 +1130,6 @@ JRR Visa Assistance Team
                                           firstDate = _parseDate(_applicationDateController.text);
                                         }
                                         _selectDate(context, _refusalDateController, firstDate: firstDate);
-                                      },
-                                      onChanged: (value) {
-                                        setState(() {
-                                          _refusalDateValidated = true;
-                                        });
                                       },
                                       validator: (value) {
                                         if (value == null || value.isEmpty) return 'Required field';
@@ -1207,7 +1139,7 @@ JRR Visa Assistance Team
                                     const SizedBox(height: 12),
                                     DropdownButtonFormField<String>(
                                       value: _selectedAppealStatus,
-                                      isExpanded: true, // FIX: Added to prevent overflow
+                                      isExpanded: true,
                                       decoration: const InputDecoration(
                                         labelText: 'Appeal Status',
                                         border: OutlineInputBorder(),
@@ -1240,20 +1172,12 @@ JRR Visa Assistance Team
                           TextFormField(
                             controller: _refusalReasonController,
                             maxLines: 3,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               labelText: 'Refusal Reason *',
                               hintText: 'Exact reason from refusal letter',
-                              border: const OutlineInputBorder(),
+                              border: OutlineInputBorder(),
                               alignLabelWithHint: true,
-                              errorText: _refusalReasonValidated && _refusalReasonController.text.isEmpty
-                                  ? 'Required field'
-                                  : null,
                             ),
-                            onChanged: (value) {
-                              setState(() {
-                                _refusalReasonValidated = true;
-                              });
-                            },
                             validator: (value) {
                               if (value == null || value.isEmpty) return 'Required field';
                               return null;
@@ -1295,131 +1219,130 @@ JRR Visa Assistance Team
                             ),
                           ),
 
-                          // Action Buttons - FIXED: Using LayoutBuilder for responsive buttons
-const SizedBox(height: 24),
-LayoutBuilder(
-  builder: (context, constraints) {
-    final bool isWide = constraints.maxWidth > 400;
-    
-    if (isWide) {
-      // Horizontal layout for wider screens
-      return Row(
-        children: [
-          Expanded(
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _submitForm,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E88E5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                elevation: 2,
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 20,
-                      width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.email, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Send Request',
-                          style: GoogleFonts.inter(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 16,
+                          // Action Buttons
+                          const SizedBox(height: 24),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final bool isWide = constraints.maxWidth > 400;
+                              
+                              if (isWide) {
+                                // Horizontal layout for wider screens
+                                return Row(
+                                  children: [
+                                    Expanded(
+                                      child: ElevatedButton(
+                                        onPressed: _isLoading ? null : _submitForm,
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF1E88E5),
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          elevation: 2,
+                                        ),
+                                        child: _isLoading
+                                            ? const SizedBox(
+                                                height: 20,
+                                                width: 20,
+                                                child: CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color: Colors.white,
+                                                ),
+                                              )
+                                            : Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                children: [
+                                                  const Icon(Icons.email, size: 20),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    'Send Request',
+                                                    style: GoogleFonts.inter(
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 16,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: _resetForm,
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          side: const BorderSide(color: Color(0xFF1E88E5)),
+                                        ),
+                                        child: Text(
+                                          'Reset Form',
+                                          style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 16,
+                                            color: const Color(0xFF1E88E5),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              } else {
+                                // Vertical layout for narrower screens
+                                return Column(
+                                  children: [
+                                    ElevatedButton(
+                                      onPressed: _isLoading ? null : _submitForm,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF1E88E5),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        elevation: 2,
+                                        minimumSize: const Size(double.infinity, 50),
+                                      ),
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              height: 20,
+                                              width: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.white,
+                                              ),
+                                            )
+                                          : Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                const Icon(Icons.email, size: 20),
+                                                const SizedBox(width: 8),
+                                                Text(
+                                                  'Send Request',
+                                                  style: GoogleFonts.inter(
+                                                    fontWeight: FontWeight.w600,
+                                                    fontSize: 16,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    OutlinedButton(
+                                      onPressed: _resetForm,
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(vertical: 16),
+                                        side: const BorderSide(color: Color(0xFF1E88E5)),
+                                        minimumSize: const Size(double.infinity, 50),
+                                      ),
+                                      child: Text(
+                                        'Reset Form',
+                                        style: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                          color: const Color(0xFF1E88E5),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                            },
                           ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: OutlinedButton(
-              onPressed: _resetForm,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                side: const BorderSide(color: Color(0xFF1E88E5)),
-              ),
-              child: Text(
-                'Reset Form',
-                style: GoogleFonts.inter(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                  color: const Color(0xFF1E88E5),
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    } else {
-      // Vertical layout for narrower screens
-      return Column(
-        children: [
-          ElevatedButton(
-            onPressed: _isLoading ? null : _submitForm,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E88E5),
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              elevation: 2,
-              minimumSize: const Size(double.infinity, 50),
-            ),
-            child: _isLoading
-                ? const SizedBox(
-                    height: 20,
-                    width: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.email, size: 20),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Send Request',
-                        style: GoogleFonts.inter(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 12),
-          OutlinedButton(
-            onPressed: _resetForm,
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              side: const BorderSide(color: Color(0xFF1E88E5)),
-              minimumSize: const Size(double.infinity, 50),
-            ),
-            child: Text(
-              'Reset Form',
-              style: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-                color: const Color(0xFF1E88E5),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-  },
-),
                           
-
                           const SizedBox(height: 16),
 
                           // How It Works Info - Like Forex Screen
@@ -1446,7 +1369,8 @@ LayoutBuilder(
                                   '• Your request is sent directly to our team\n'
                                   '• No manual email sending required\n'
                                   '• Team will contact you within 24 hours\n'
-                                  '• Fallback email option available if needed',
+                                  '• Fallback email option available if needed\n'
+                                  '• Application ID: $_applicationId',
                                   style: GoogleFonts.inter(
                                     fontSize: 11,
                                     color: Colors.grey[700],

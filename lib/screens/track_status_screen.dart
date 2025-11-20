@@ -13,17 +13,12 @@ class TrackStatusScreen extends StatefulWidget {
 class _TrackStatusScreenState extends State<TrackStatusScreen> {
   final TextEditingController _applicationIdController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
-  // Removed unused phoneController since we're using mock data
-  
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   
   bool _isLoading = false;
   bool _hasSearched = false;
-  
-  // Mock application data - In real app, this would come from backend
   Map<String, dynamic>? _applicationData;
   
-  // Tracking stages as per client requirement
   final List<TrackingStage> _trackingStages = [
     TrackingStage(
       title: 'Application Info',
@@ -77,23 +72,18 @@ class _TrackStatusScreenState extends State<TrackStatusScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Search Section
             _buildSearchSection(),
-            
             const SizedBox(height: 24),
             
             if (_hasSearched && _applicationData != null) ...[
-              // Application Status Display
               _buildApplicationStatus(),
               const SizedBox(height: 16),
               _buildTrackingStages(),
               const SizedBox(height: 16),
               _buildApplicationDetails(),
             ] else if (_hasSearched) ...[
-              // No application found
               _buildNotFoundMessage(),
             ] else ...[
-              // Welcome message
               _buildWelcomeMessage(),
             ],
           ],
@@ -102,207 +92,191 @@ class _TrackStatusScreenState extends State<TrackStatusScreen> {
     );
   }
 
-  
-
-Widget _buildSearchSection() {
-  return Card(
-    elevation: 2,
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Track Your Application',
-              style: GoogleFonts.inter(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1E88E5),
-              ),
-            ),
-            const SizedBox(height: 12),
-            
-            // Responsive form layout
-LayoutBuilder(
-  builder: (context, constraints) {
-    final bool isWideScreen = constraints.maxWidth > 600;
-    
-    if (isWideScreen) {
-      // Wide screen - horizontal layout
-      return Row(
-        children: [
-          // Application ID Field
-          Expanded(
-            child: TextFormField(
-              controller: _applicationIdController,
-              decoration: const InputDecoration(
-                labelText: 'Application ID',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                isDense: true, // Reduces height slightly to prevent cutting
-              ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Required';
-                }
-                return null;
-              },
-            ),
-          ),
-          
-          const SizedBox(width: 12),
-          
-          // Email Field
-          Expanded(
-            child: TextFormField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                border: OutlineInputBorder(),
-                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                isDense: true, // Reduces height slightly to prevent cutting
-              ),
-              keyboardType: TextInputType.emailAddress,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Required';
-                }
-                if (!_isValidEmail(value)) {
-                  return 'Invalid email';
-                }
-                return null;
-              },
-            ),
-          ),
-          
-          const SizedBox(width: 12),
-          
-          // Search Button
-          SizedBox(
-            width: 100, // Fixed width for button
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _searchApplication,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E88E5),
-                foregroundColor: Colors.white,
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      'Search',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      );
-    } else {
-      // Narrow screen - vertical layout
-      return Column(
-        children: [
-          // Application ID Field
-          TextFormField(
-            controller: _applicationIdController,
-            decoration: const InputDecoration(
-              labelText: 'Application ID',
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            ),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Required';
-              }
-              return null;
-            },
-          ),
-          
-          const SizedBox(height: 12),
-          
-          // Email Field
-          TextFormField(
-            controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            ),
-            keyboardType: TextInputType.emailAddress,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Required';
-              }
-              if (!_isValidEmail(value)) {
-                return 'Invalid email';
-              }
-              return null;
-            },
-          ),
-          
-          const SizedBox(height: 12),
-          
-          // Search Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _searchApplication,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1E88E5),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      'Search',
-                      style: GoogleFonts.inter(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      );
-    }
-  },
-),
-            
-            
-            // Error messages display area
-            if (_formKey.currentState?.validate() == false) ...[
-              const SizedBox(height: 8),
+  Widget _buildSearchSection() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Text(
-                'Please fix the errors above',
+                'Track Your Application',
                 style: GoogleFonts.inter(
-                  color: Colors.red,
-                  fontSize: 12,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E88E5),
                 ),
               ),
+              const SizedBox(height: 12),
+              
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final bool isWideScreen = constraints.maxWidth > 600;
+                  
+                  if (isWideScreen) {
+                    return Row(
+                      children: [
+                        Flexible(
+                          flex: 2,
+                          child: TextFormField(
+                            controller: _applicationIdController,
+                            decoration: const InputDecoration(
+                              labelText: 'Application ID',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              isDense: true,
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Required';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Flexible(
+                          flex: 2,
+                          child: TextFormField(
+                            controller: _emailController,
+                            decoration: const InputDecoration(
+                              labelText: 'Email',
+                              border: OutlineInputBorder(),
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              isDense: true,
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Required';
+                              }
+                              if (!_isValidEmail(value)) {
+                                return 'Invalid email';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 90,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _searchApplication,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E88E5),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : Text(
+                                    'Search',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    );
+                  } else {
+                    return Column(
+                      children: [
+                        TextFormField(
+                          controller: _applicationIdController,
+                          decoration: const InputDecoration(
+                            labelText: 'Application ID',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Required';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(
+                            labelText: 'Email',
+                            border: OutlineInputBorder(),
+                            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Required';
+                            }
+                            if (!_isValidEmail(value)) {
+                              return 'Invalid email';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _searchApplication,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E88E5),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : Text(
+                                    'Search',
+                                    style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                },
+              ),
+              
+              if (_formKey.currentState?.validate() == false) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Please fix the errors above',
+                  style: GoogleFonts.inter(
+                    color: Colors.red,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
+
   Widget _buildApplicationStatus() {
     final status = _applicationData!['status'] ?? 'Unknown';
     final statusColor = _getStatusColor(status);
@@ -359,290 +333,170 @@ LayoutBuilder(
     );
   }
 
-  // Replace your entire _buildTrackingStages() method with this:
-
-Widget _buildTrackingStages() {
-  return Card(
-    elevation: 2,
-    child: Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Application Progress',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E88E5),
-            ),
-          ),
-          const SizedBox(height: 12),
-          
-          // Horizontal Scrollable Stages
-          SizedBox(
-            height: 120, // Fixed height for horizontal view
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: _trackingStages.asMap().entries.map((entry) {
-                final index = entry.key;
-                final stage = entry.value;
-                return _buildHorizontalStage(stage, index);
-              }).toList(),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-Widget _buildHorizontalStage(TrackingStage stage, int index) {
-  return Container(
-    width: 140, // Fixed width for each stage
-    margin: EdgeInsets.only(
-      right: index < _trackingStages.length - 1 ? 8 : 0,
-    ),
-    child: Column(
-      children: [
-        // Stage indicator with number
-        Stack(
-          alignment: Alignment.center,
+  Widget _buildTrackingStages() {
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: _getStageColor(stage.status),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: _getStageBorderColor(stage.status),
-                  width: 2,
-                ),
+            Text(
+              'Application Progress',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E88E5),
               ),
             ),
-            Text(
-              '${index + 1}',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 120,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: _trackingStages.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final stage = entry.value;
+                  return _buildHorizontalStage(stage, index);
+                }).toList(),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        
-        // Stage title
-        Text(
-          stage.title,
-          style: GoogleFonts.inter(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: _getStageColor(stage.status),
-          ),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-        ),
-        
-        // Stage status
-        Text(
-          _getStageStatusText(stage.status),
-          style: GoogleFonts.inter(
-            fontSize: 10,
-            color: Colors.grey[600],
-          ),
-        ),
-        
-        // Completion date if available
-        if (stage.completedDate != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            DateFormat('dd MMM').format(stage.completedDate!),
-            style: GoogleFonts.inter(
-              fontSize: 9,
-              color: Colors.grey[500],
-            ),
-          ),
-        ],
-      ],
-    ),
-  );
-}
-
-String _getStageStatusText(StageStatus status) {
-  switch (status) {
-    case StageStatus.completed:
-      return 'Completed';
-    case StageStatus.inProgress:
-      return 'In Progress';
-    case StageStatus.pending:
-      return 'Pending';
+      ),
+    );
   }
-}
 
-  Widget _buildTimelineRow(TrackingStage stage, int index, bool isLast) {
-    return Column(
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Timeline indicator
-            Column(
-              children: [
-                Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    color: _getStageColor(stage.status),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _getStageBorderColor(stage.status),
-                      width: 2,
-                    ),
-                  ),
-                  child: Icon(
-                    _getStageIcon(stage.status),
-                    size: 12,
-                    color: Colors.white,
-                  ),
-                ),
-                if (!isLast)
-                  Container(
-                    width: 2,
-                    height: 40,
-                    color: _getTimelineColor(index),
-                  ),
-              ],
-            ),
-            
-            const SizedBox(width: 16),
-            
-            // Stage content
-            Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(12),
+  Widget _buildHorizontalStage(TrackingStage stage, int index) {
+    return Container(
+      width: 140,
+      margin: EdgeInsets.only(
+        right: index < _trackingStages.length - 1 ? 8 : 0,
+      ),
+      child: Column(
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  color: _getStageBackgroundColor(stage.status),
-                  borderRadius: BorderRadius.circular(8),
+                  color: _getStageColor(stage.status),
+                  shape: BoxShape.circle,
                   border: Border.all(
                     color: _getStageBorderColor(stage.status),
+                    width: 2,
                   ),
+                ),
+              ),
+              Text(
+                '${index + 1}',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            stage.title,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _getStageColor(stage.status),
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+          ),
+          Text(
+            _getStageStatusText(stage.status),
+            style: GoogleFonts.inter(
+              fontSize: 10,
+              color: Colors.grey[600],
+            ),
+          ),
+          if (stage.completedDate != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              DateFormat('dd MMM').format(stage.completedDate!),
+              style: GoogleFonts.inter(
+                fontSize: 9,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApplicationDetails() {
+    final applicantName = _applicationData!['applicantName']?.toString() ?? 'Not provided';
+    final destinationCountry = _applicationData!['destinationCountry']?.toString() ?? 'Not provided';
+    final visaType = _applicationData!['visaType']?.toString() ?? 'Not provided';
+    final applicationFee = _applicationData!['applicationFee']?.toString() ?? 'Not paid';
+    final paymentStatus = _applicationData!['paymentStatus']?.toString() ?? 'pending';
+    final documentsCount = _applicationData!['documentsCount']?.toString() ?? '0 documents';
+    final lastUpdated = _applicationData!['lastUpdated']?.toString() ?? 'Not available';
+    final notes = _applicationData!['notes']?.toString();
+
+    return Card(
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Application Details',
+              style: GoogleFonts.inter(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E88E5),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildDetailRow('Applicant Name', applicantName),
+            _buildDetailRow('Destination Country', destinationCountry),
+            _buildDetailRow('Visa Type', visaType),
+            _buildDetailRow('Application Fee', applicationFee),
+            _buildDetailRow('Payment Status', paymentStatus),
+            _buildDetailRow('Documents Uploaded', documentsCount),
+            _buildDetailRow('Last Updated', lastUpdated),
+            if (notes != null && notes.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.shade200),
                 ),
                 child: Row(
                   children: [
-                    Icon(stage.icon, color: _getStageColor(stage.status)),
-                    const SizedBox(width: 12),
+                    const Icon(Icons.info, color: Colors.orange),
+                    const SizedBox(width: 8),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            stage.title,
-                            style: GoogleFonts.inter(
-                              fontWeight: FontWeight.w600,
-                              color: _getStageColor(stage.status),
-                            ),
-                          ),
-                          Text(
-                            stage.description,
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                          if (stage.completedDate != null) ...[
-                            const SizedBox(height: 4),
-                            Text(
-                              'Completed: ${DateFormat('dd MMM yyyy').format(stage.completedDate!)}',
-                              style: GoogleFonts.inter(
-                                fontSize: 10,
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
-                        ],
+                      child: Text(
+                        notes,
+                        style: GoogleFonts.inter(
+                          color: Colors.orange[800],
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ],
         ),
-      ],
+      ),
     );
   }
-
-  Widget _buildApplicationDetails() {
-  // Safely get all values with fallbacks
-  final applicantName = _applicationData!['applicantName']?.toString() ?? 'Not provided';
-  //final passportNumber = _applicationData!['passportNumber']?.toString() ?? 'Not provided';
-  final destinationCountry = _applicationData!['destinationCountry']?.toString() ?? 'Not provided';
-  final visaType = _applicationData!['visaType']?.toString() ?? 'Not provided';
-  final applicationFee = _applicationData!['applicationFee']?.toString() ?? 'Not paid';
-  final paymentStatus = _applicationData!['paymentStatus']?.toString() ?? 'pending';
-  final documentsCount = _applicationData!['documentsCount']?.toString() ?? '0 documents';
-  final lastUpdated = _applicationData!['lastUpdated']?.toString() ?? 'Not available';
-  final notes = _applicationData!['notes']?.toString();
-
-  return Card(
-    elevation: 2,
-    child: Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Application Details',
-            style: GoogleFonts.inter(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: const Color(0xFF1E88E5),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          _buildDetailRow('Applicant Name', applicantName),
-          _buildDetailRow('Destination Country', destinationCountry),
-          _buildDetailRow('Visa Type', visaType),
-          _buildDetailRow('Application Fee', applicationFee),
-          _buildDetailRow('Payment Status', paymentStatus),
-          _buildDetailRow('Documents Uploaded', documentsCount),
-          _buildDetailRow('Last Updated', lastUpdated),
-          
-          if (notes != null && notes.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.orange[50],
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange.shade200),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.info, color: Colors.orange),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      notes,
-                      style: GoogleFonts.inter(
-                        color: Colors.orange[800],
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
-}
 
   Widget _buildNotFoundMessage() {
     return Card(
@@ -705,7 +559,7 @@ String _getStageStatusText(StageStatus status) {
             Icon(
               Icons.track_changes,
               size: 64,
-              color: const Color(0xFF1E88E5).withOpacity(0.7), // This is fine for now
+              color: const Color(0xFF1E88E5).withOpacity(0.7),
             ),
             const SizedBox(height: 16),
             Text(
@@ -817,246 +671,229 @@ String _getStageStatusText(StageStatus status) {
   }
 
   void _searchApplication() async {
-  if (!_formKey.currentState!.validate()) {
-    return;
-  }
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-  setState(() {
-    _isLoading = true;
-    _applicationData = null;
-  });
+    setState(() {
+      _isLoading = true;
+      _applicationData = null;
+    });
 
-  try {
-    final applicationId = _applicationIdController.text.trim();
-    final email = _emailController.text.trim().toLowerCase();
+    try {
+      final applicationId = _applicationIdController.text.trim();
+      final email = _emailController.text.trim().toLowerCase();
 
-    debugPrint('🔍 Searching for application: $applicationId, email: $email');
+      debugPrint('🔍 Searching for application: $applicationId, email: $email');
 
-    // REAL API call to database
-    final applicationData = await DatabaseService.getApplicationForTracking(
-      applicationId: applicationId,
-      email: email,
-    );
+      final applicationData = await DatabaseService.getApplicationForTracking(
+        applicationId: applicationId,
+        email: email,
+      );
 
-    _logDatabaseResponse(applicationData); 
+      _logDatabaseResponse(applicationData); 
 
-    if (applicationData != null && applicationData.isNotEmpty) {
-      final applicationUuid = applicationData['id'] as String;
-      
-      debugPrint('✅ Application found, fetching additional data...');
-      
-      try {
-        // Get all related data with proper type handling
-        final trackingStages = await DatabaseService.getTrackingStages(applicationUuid);
-        final paymentData = await DatabaseService.getPayment(applicationUuid);
-        final documents = await DatabaseService.getApplicationDocuments(applicationUuid);
-        // Ensure proper type casting
-        final List<Map<String, dynamic>> typedTrackingStages = 
-            (trackingStages as List).cast<Map<String, dynamic>>();
-        final List<Map<String, dynamic>> typedDocuments = 
-            (documents as List).cast<Map<String, dynamic>>();
-
-        debugPrint('📊 Data retrieved - Stages: ${typedTrackingStages.length}, Payment: ${paymentData != null ? 'Yes' : 'No'}, Documents: ${typedDocuments.length}');
-
-        // Format the data for display
-        final formattedData = _formatApplicationData(
-          applicationData, 
-          typedTrackingStages, 
-          paymentData, 
-          typedDocuments
-        );
+      if (applicationData != null && applicationData.isNotEmpty) {
+        final applicationUuid = applicationData['id'] as String;
         
-        // Update UI with real data
+        debugPrint('✅ Application found, fetching additional data...');
+        
+        try {
+          final trackingStages = await DatabaseService.getTrackingStages(applicationUuid);
+          final paymentData = await DatabaseService.getPayment(applicationUuid);
+          final documents = await DatabaseService.getApplicationDocuments(applicationUuid);
+          
+          final List<Map<String, dynamic>> typedTrackingStages = 
+              (trackingStages as List).cast<Map<String, dynamic>>();
+          final List<Map<String, dynamic>> typedDocuments = 
+              (documents as List).cast<Map<String, dynamic>>();
+
+          debugPrint('📊 Data retrieved - Stages: ${typedTrackingStages.length}, Payment: ${paymentData != null ? 'Yes' : 'No'}, Documents: ${typedDocuments.length}');
+
+          final formattedData = _formatApplicationData(
+            applicationData, 
+            typedTrackingStages, 
+            paymentData, 
+            typedDocuments
+          );
+          
+          setState(() {
+            _applicationData = formattedData;
+            _updateTrackingStagesFromDatabase(typedTrackingStages);
+          });
+          
+          debugPrint('✅ Application data loaded successfully');
+        } catch (e) {
+          debugPrint('💥 Error fetching related data: $e');
+          throw Exception('Failed to load application details: $e');
+        }
+      } else {
+        debugPrint('❌ No application found with provided details');
         setState(() {
-          _applicationData = formattedData;
-          _updateTrackingStagesFromDatabase(typedTrackingStages);
+          _applicationData = null;
         });
         
-        debugPrint('✅ Application data loaded successfully');
-      } catch (e) {
-        debugPrint('💥 Error fetching related data: $e');
-        throw Exception('Failed to load application details: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('No application found with the provided Application ID and Email'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
       }
-    } else {
-      // No application found
-      debugPrint('❌ No application found with provided details');
-      setState(() {
-        _applicationData = null;
-      });
       
+    } catch (e) {
+      debugPrint('💥 Error searching application: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('No application found with the provided Application ID and Email'),
-            backgroundColor: Colors.orange,
+          SnackBar(
+            content: Text('Error searching application: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
         );
       }
-    }
-    
-  } catch (e) {
-    debugPrint('💥 Error searching application: $e');
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error searching application: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  } finally {
-    if (mounted) {
-      setState(() {
-        _isLoading = false;
-        _hasSearched = true;
-      });
-    }
-  }
-}
-
-// ADD THIS NEW METHOD - Place it inside _TrackStatusScreenState class
-void _logDatabaseResponse(Map<String, dynamic>? applicationData) {
-  if (applicationData == null) {
-    debugPrint('📭 Database returned null application data');
-    return;
-  }
-  
-  debugPrint('📋 APPLICATION DATA FROM DATABASE:');
-  debugPrint('  - ID: ${applicationData['id']}');
-  debugPrint('  - Application ID: ${applicationData['application_id']}');
-  debugPrint('  - Name: ${applicationData['first_name']} ${applicationData['last_name']}');
-  debugPrint('  - Email: ${applicationData['email']}');
-  debugPrint('  - Status: ${applicationData['status']}');
-  debugPrint('  - Visa Type: ${applicationData['visa_type']}');
-  debugPrint('  - Country: ${applicationData['destination_country']}');
-  debugPrint('  - Created: ${applicationData['created_at']}');
-  debugPrint('  - Updated: ${applicationData['updated_at']}');
-}
-
-Map<String, dynamic> _formatApplicationData(
-  Map<String, dynamic> applicationData,
-  List<Map<String, dynamic>> trackingStages,
-  Map<String, dynamic>? paymentData,
-  List<Map<String, dynamic>> documents,
-) {
-  final status = applicationData['status']?.toString() ?? 'submitted';
-  final submittedDate = applicationData['created_at'] != null 
-      ? DateFormat('dd MMM yyyy').format(DateTime.parse(applicationData['created_at'].toString()).toLocal())
-      : 'Not available';
-  
-  final lastUpdated = applicationData['updated_at'] != null
-      ? DateFormat('dd MMM yyyy').format(DateTime.parse(applicationData['updated_at'].toString()).toLocal())
-      : submittedDate;
-
-  // Calculate progress based on actual completed stages from database
-  final completedStages = trackingStages.where((stage) => stage['status'] == 'completed').length;
-  final totalStages = trackingStages.length;
-
-  // Get payment status with proper fallbacks
-  // Get payment status with proper fallbacks
-String paymentStatus = 'pending';
-String paymentAmount = 'Not paid';
-
-if (paymentData != null) {
-  paymentStatus = paymentData['status']?.toString() ?? 'pending';
-  
-  // Format payment amount based on payment method
-  if (paymentData['amount'] != null) {
-    final paymentMethod = paymentData['payment_method']?.toString() ?? '';
-    if (paymentMethod == 'payLater') {
-      paymentAmount = '₹${paymentData['amount']} (Pay Later)';
-    } else {
-      paymentAmount = '₹${paymentData['amount']}';
-    }
-  }
-  
-  // For Pay Later users, show appropriate status
-  if (paymentData['payment_method']?.toString() == 'payLater' && paymentStatus == 'pending') {
-    paymentStatus = 'scheduled'; // More descriptive than 'pending'
-  }
-}
-
-  // Safely handle all fields that could be null
-  return {
-    'id': applicationData['application_id']?.toString() ?? 'N/A',
-    'status': status,
-    'applicantName': '${applicationData['first_name']?.toString() ?? ''} ${applicationData['last_name']?.toString() ?? ''}'.trim(),
-    'destinationCountry': applicationData['destination_country']?.toString() ?? 'Not provided',
-    'visaType': applicationData['visa_type']?.toString() ?? 'Not provided',
-    'applicationFee': paymentAmount,
-    'paymentStatus': paymentStatus,
-    'documentsCount': '${documents.length} document${documents.length != 1 ? 's' : ''}',
-    'submittedDate': submittedDate,
-    'lastUpdated': lastUpdated,
-    'progress': '$completedStages/$totalStages stages completed',
-    'notes': _getStatusNotes(status, applicationData),
-    
-  };
-}
-
-void _updateTrackingStagesFromDatabase(List<Map<String, dynamic>> dbStages) {
-  // Reset all stages to pending first
-  for (int i = 0; i < _trackingStages.length; i++) {
-    _trackingStages[i] = _trackingStages[i].copyWith(
-      status: StageStatus.pending,
-      completedDate: null,
-    );
-  }
-  
-  // Update stages based on actual database data
-  for (final dbStage in dbStages) {
-    final stageNumber = dbStage['stage_number'] as int?;
-    if (stageNumber == null || stageNumber < 1 || stageNumber > _trackingStages.length) {
-      continue;
-    }
-    
-    final index = stageNumber - 1;
-    StageStatus status;
-    switch (dbStage['status']) {
-      case 'completed':
-        status = StageStatus.completed;
-        break;
-      case 'in_progress':
-        status = StageStatus.inProgress;
-        break;
-      default:
-        status = StageStatus.pending;
-    }
-    
-    DateTime? completedDate;
-    if (dbStage['completed_at'] != null) {
-      try {
-        completedDate = DateTime.parse(dbStage['completed_at']).toLocal();
-      } catch (e) {
-        debugPrint('Error parsing completed_at: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _hasSearched = true;
+        });
       }
     }
-    
-    _trackingStages[index] = _trackingStages[index].copyWith(
-      status: status,
-      completedDate: completedDate,
-    );
   }
-}
 
-// Get status-specific notes
-String _getStatusNotes(String status, Map<String, dynamic> applicationData) {
-  switch (status) {
-    case 'submitted':
-      return 'Application submitted successfully. Waiting for payment confirmation.';
-    case 'payment_pending':
-      return 'Payment pending. Please complete the payment to proceed.';
-    case 'under_review':
-      return 'Application is under review. Our team is processing your documents.';
-    case 'approved':
-      return 'Congratulations! Your visa has been approved.';
-    case 'rejected':
-      return 'Visa application rejected. Please contact support for details.';
-    default:
-      return 'Application is being processed.';
+  void _logDatabaseResponse(Map<String, dynamic>? applicationData) {
+    if (applicationData == null) {
+      debugPrint('📭 Database returned null application data');
+      return;
+    }
+    
+    debugPrint('📋 APPLICATION DATA FROM DATABASE:');
+    debugPrint('  - ID: ${applicationData['id']}');
+    debugPrint('  - Application ID: ${applicationData['application_id']}');
+    debugPrint('  - Name: ${applicationData['first_name']} ${applicationData['last_name']}');
+    debugPrint('  - Email: ${applicationData['email']}');
+    debugPrint('  - Status: ${applicationData['status']}');
+    debugPrint('  - Visa Type: ${applicationData['visa_type']}');
+    debugPrint('  - Country: ${applicationData['destination_country']}');
+    debugPrint('  - Created: ${applicationData['created_at']}');
+    debugPrint('  - Updated: ${applicationData['updated_at']}');
   }
-} 
- 
+
+  Map<String, dynamic> _formatApplicationData(
+    Map<String, dynamic> applicationData,
+    List<Map<String, dynamic>> trackingStages,
+    Map<String, dynamic>? paymentData,
+    List<Map<String, dynamic>> documents,
+  ) {
+    final status = applicationData['status']?.toString() ?? 'submitted';
+    final submittedDate = applicationData['created_at'] != null 
+        ? DateFormat('dd MMM yyyy').format(DateTime.parse(applicationData['created_at'].toString()).toLocal())
+        : 'Not available';
+    
+    final lastUpdated = applicationData['updated_at'] != null
+        ? DateFormat('dd MMM yyyy').format(DateTime.parse(applicationData['updated_at'].toString()).toLocal())
+        : submittedDate;
+
+    final completedStages = trackingStages.where((stage) => stage['status'] == 'completed').length;
+    final totalStages = trackingStages.length;
+
+    String paymentStatus = 'pending';
+    String paymentAmount = 'Not paid';
+
+    if (paymentData != null) {
+      paymentStatus = paymentData['status']?.toString() ?? 'pending';
+      
+      if (paymentData['amount'] != null) {
+        final paymentMethod = paymentData['payment_method']?.toString() ?? '';
+        if (paymentMethod == 'payLater') {
+          paymentAmount = '₹${paymentData['amount']} (Pay Later)';
+        } else {
+          paymentAmount = '₹${paymentData['amount']}';
+        }
+      }
+      
+      if (paymentData['payment_method']?.toString() == 'payLater' && paymentStatus == 'pending') {
+        paymentStatus = 'scheduled';
+      }
+    }
+
+    return {
+      'id': applicationData['application_id']?.toString() ?? 'N/A',
+      'status': status,
+      'applicantName': '${applicationData['first_name']?.toString() ?? ''} ${applicationData['last_name']?.toString() ?? ''}'.trim(),
+      'destinationCountry': applicationData['destination_country']?.toString() ?? 'Not provided',
+      'visaType': applicationData['visa_type']?.toString() ?? 'Not provided',
+      'applicationFee': paymentAmount,
+      'paymentStatus': paymentStatus,
+      'documentsCount': '${documents.length} document${documents.length != 1 ? 's' : ''}',
+      'submittedDate': submittedDate,
+      'lastUpdated': lastUpdated,
+      'progress': '$completedStages/$totalStages stages completed',
+      'notes': _getStatusNotes(status, applicationData),
+    };
+  }
+
+  void _updateTrackingStagesFromDatabase(List<Map<String, dynamic>> dbStages) {
+    for (int i = 0; i < _trackingStages.length; i++) {
+      _trackingStages[i] = _trackingStages[i].copyWith(
+        status: StageStatus.pending,
+        completedDate: null,
+      );
+    }
+    
+    for (final dbStage in dbStages) {
+      final stageNumber = dbStage['stage_number'] as int?;
+      if (stageNumber == null || stageNumber < 1 || stageNumber > _trackingStages.length) {
+        continue;
+      }
+      
+      final index = stageNumber - 1;
+      StageStatus status;
+      switch (dbStage['status']) {
+        case 'completed':
+          status = StageStatus.completed;
+          break;
+        case 'in_progress':
+          status = StageStatus.inProgress;
+          break;
+        default:
+          status = StageStatus.pending;
+      }
+      
+      DateTime? completedDate;
+      if (dbStage['completed_at'] != null) {
+        try {
+          completedDate = DateTime.parse(dbStage['completed_at']).toLocal();
+        } catch (e) {
+          debugPrint('Error parsing completed_at: $e');
+        }
+      }
+      
+      _trackingStages[index] = _trackingStages[index].copyWith(
+        status: status,
+        completedDate: completedDate,
+      );
+    }
+  }
+
+  String _getStatusNotes(String status, Map<String, dynamic> applicationData) {
+    switch (status) {
+      case 'submitted':
+        return 'Application submitted successfully. Waiting for payment confirmation.';
+      case 'payment_pending':
+        return 'Payment pending. Please complete the payment to proceed.';
+      case 'under_review':
+        return 'Application is under review. Our team is processing your documents.';
+      case 'approved':
+        return 'Congratulations! Your visa has been approved.';
+      case 'rejected':
+        return 'Visa application rejected. Please contact support for details.';
+      default:
+        return 'Application is being processed.';
+    }
+  }
 
   // Helper methods for styling
   Color _getStatusColor(String status) {
@@ -1108,25 +945,12 @@ String _getStatusNotes(String status, Map<String, dynamic> applicationData) {
     }
   }
 
-  Color _getStageBackgroundColor(StageStatus status) {
+  String _getStageStatusText(StageStatus status) {
     switch (status) {
-      case StageStatus.completed: return Colors.green.shade50;
-      case StageStatus.inProgress: return Colors.orange.shade50;
-      case StageStatus.pending: return Colors.grey.shade50;
+      case StageStatus.completed: return 'Completed';
+      case StageStatus.inProgress: return 'In Progress';
+      case StageStatus.pending: return 'Pending';
     }
-  }
-
-  IconData _getStageIcon(StageStatus status) {
-    switch (status) {
-      case StageStatus.completed: return Icons.check;
-      case StageStatus.inProgress: return Icons.autorenew;
-      case StageStatus.pending: return Icons.schedule;
-    }
-  }
-
-  Color _getTimelineColor(int index) {
-    final currentStage = _trackingStages[index].status;
-    return currentStage == StageStatus.completed ? Colors.green : Colors.grey.shade300;
   }
 
   bool _isValidEmail(String email) {
@@ -1135,7 +959,6 @@ String _getStatusNotes(String status, Map<String, dynamic> applicationData) {
   }
 }
 
-// Data models for tracking stages
 enum StageStatus { pending, inProgress, completed }
 
 class TrackingStage {

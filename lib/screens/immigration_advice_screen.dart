@@ -26,6 +26,7 @@ class _ImmigrationAdviceScreenState extends State<ImmigrationAdviceScreen> {
   final TextEditingController _targetCountryController = TextEditingController();
   final TextEditingController _visaTypeController = TextEditingController();
   final TextEditingController _purposeController = TextEditingController();
+  final TextEditingController _otherAdviceController = TextEditingController();
 
   // Dropdown values
   String? _selectedAdviceType;
@@ -33,6 +34,9 @@ class _ImmigrationAdviceScreenState extends State<ImmigrationAdviceScreen> {
 
   // Character count for purpose field
   int _purposeCharCount = 0;
+
+  // Track if "Other" is selected
+  bool get _showOtherAdviceField => _selectedAdviceType == 'Other';
 
   static const List<String> _adviceTypes = [
     'Visa Eligibility Assessment',
@@ -60,6 +64,7 @@ class _ImmigrationAdviceScreenState extends State<ImmigrationAdviceScreen> {
     _targetCountryController.dispose();
     _visaTypeController.dispose();
     _purposeController.dispose();
+    _otherAdviceController.dispose();
     super.dispose();
   }
 
@@ -84,25 +89,29 @@ class _ImmigrationAdviceScreenState extends State<ImmigrationAdviceScreen> {
       _isSubmitting = true;
     });
 
+    // STEP 1: Generate unique application ID
+    final now = DateTime.now();
+    final applicationId = 'IA${now.millisecondsSinceEpoch}';
+
     try {
       final subject = 'JRR GO Immigration Advice Request - ${_fullNameController.text}';
-      final body = _generateEmailBody();
-
-      final emailSent = await _sendEmailViaResendAPI(subject, body);
+      final body = _generateEmailBody(applicationId);
+      final htmlBody = _generateHtmlEmailBody(applicationId);
+      final emailSent = await _sendEmailViaResendAPI(subject, body, htmlBody, applicationId);
       
       if (emailSent) {
         if (!mounted) return;
-        _showFinalSuccessDialog();
+        _showFinalSuccessDialog(applicationId);
       } else {
         if (!mounted) return;
-        _showManualEmailOption(subject, body);
+        _showManualEmailOption(subject, body, applicationId);
       }
     } catch (error) {
       if (!mounted) return;
       debugPrint('Email sending error: $error');
       final subject = 'JRR GO Immigration Advice Request - ${_fullNameController.text}';
-      final body = _generateEmailBody();
-      _showManualEmailOption(subject, body);
+      final body = _generateEmailBody(applicationId);
+      _showManualEmailOption(subject, body, applicationId);
     } finally {
       if (mounted) {
         setState(() {
@@ -112,13 +121,20 @@ class _ImmigrationAdviceScreenState extends State<ImmigrationAdviceScreen> {
     }
   }
 
-  String _generateEmailBody() {
+  String _generateEmailBody(String applicationId) {
     final now = DateTime.now();
+    
+    // Handle "Other" advice type
+    String adviceType = _selectedAdviceType ?? 'Not specified';
+    if (_selectedAdviceType == 'Other' && _otherAdviceController.text.isNotEmpty) {
+      adviceType = 'Other: ${_otherAdviceController.text}';
+    }
     
     return '''
 **IMMIGRATION ADVICE REQUEST - CLIENT SUBMISSION**
 
-**SUBMISSION DETAILS**
+**APPLICATION TRACKING**
+• Application ID: $applicationId
 • Submitted: ${_emailDateFormatter.format(now)}
 • Service Type: Immigration Advice
 
@@ -130,15 +146,17 @@ class _ImmigrationAdviceScreenState extends State<ImmigrationAdviceScreen> {
 **IMMIGRATION DETAILS**
 • Current Country: ${_currentCountryController.text}
 • Destination Country: ${_targetCountryController.text}
-• Advice Type: ${_selectedAdviceType ?? 'Not specified'}
+• Advice Type: $adviceType
 • Preferred Visa Type: ${_visaTypeController.text}
 • Timeline: ${_selectedTimeline ?? 'Not specified'}
 
 **PURPOSE & BACKGROUND**
 • Purpose of Immigration: ${_purposeController.text.isNotEmpty ? _purposeController.text : 'Not specified'}
 
-**REQUEST**
-Please provide professional immigration advice for the above case.
+**TRACKING INFORMATION**
+Application Status: RECEIVED ✅
+Our team will contact you within 24 hours.
+Use this Application ID for follow-up: $applicationId
 
 ---
 **ACTION REQUIRED:** Please contact the client within 24 hours for initial consultation.
@@ -148,14 +166,104 @@ JRR Immigration Advisory Team
 ''';
   }
 
-  Future<bool> _sendEmailViaResendAPI(String subject, String body) async {
+  String _generateHtmlEmailBody(String applicationId) {
+  final now = DateTime.now();
+  
+  // Handle "Other" advice type
+  String adviceType = _selectedAdviceType ?? 'Not specified';
+  if (_selectedAdviceType == 'Other' && _otherAdviceController.text.isNotEmpty) {
+    adviceType = 'Other: ${_otherAdviceController.text}';
+  }
+
+  // ✅ USE YOUR ACTUAL LOGO URL (from the screenshot)
+  String logoUrl = 'https://zbjowyzxujktgwqrjseh.supabase.co/storage/v1/object/public/logos/JRR%20Logo.png';
+
+  return '''
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .header { background: linear-gradient(135deg, #1E88E5, #1565C0); color: white; padding: 20px; text-align: center; border-radius: 8px; margin-bottom: 20px; }
+        .logo-container { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px; }
+        .logo-img { height: 50px; width: auto; }
+        .logo-text { font-size: 24px; font-weight: bold; }
+        .application-id { background: #e3f2fd; padding: 15px; border-left: 4px solid #1E88E5; margin: 15px 0; }
+        .section { margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        .section-title { color: #1E88E5; font-weight: bold; margin-bottom: 10px; font-size: 16px; }
+        .field { margin: 8px 0; }
+        .field-label { font-weight: bold; color: #555; }
+        .status { background: #e8f5e8; color: #2e7d32; padding: 10px; border-radius: 5px; text-align: center; margin: 15px 0; font-weight: bold; }
+        .footer { margin-top: 30px; padding-top: 20px; border-top: 2px solid #1E88E5; text-align: center; color: #666; }
+        .action-required { background: #fff3e0; padding: 15px; border-left: 4px solid #ff9800; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-container">
+            <img src="$logoUrl" alt="JRR Logo" class="logo-img" onerror="this.style.display='none'">
+            <div class="logo-text">🚀 JRR IMMIGRATION SERVICES</div>
+        </div>      
+        <div>Professional Immigration Advisory</div>
+    </div>
+
+    <div class="application-id">
+        <strong>Application ID:</strong> $applicationId<br>
+        <strong>Submitted:</strong> ${_emailDateFormatter.format(now)}<br>
+        <strong>Service Type:</strong> Immigration Advice
+    </div>
+
+    <!-- Rest of your HTML remains exactly the same -->
+    <div class="section">
+        <div class="section-title">📋 PERSONAL INFORMATION</div>
+        <div class="field"><span class="field-label">Full Name:</span> ${_fullNameController.text}</div>
+        <div class="field"><span class="field-label">Email:</span> ${_emailController.text}</div>
+        <div class="field"><span class="field-label">Phone:</span> ${_phoneController.text}</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🌍 IMMIGRATION DETAILS</div>
+        <div class="field"><span class="field-label">Current Country:</span> ${_currentCountryController.text}</div>
+        <div class="field"><span class="field-label">Destination Country:</span> ${_targetCountryController.text}</div>
+        <div class="field"><span class="field-label">Advice Type:</span> $adviceType</div>
+        <div class="field"><span class="field-label">Preferred Visa Type:</span> ${_visaTypeController.text}</div>
+        <div class="field"><span class="field-label">Timeline:</span> ${_selectedTimeline ?? 'Not specified'}</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">🎯 PURPOSE & BACKGROUND</div>
+        <div class="field"><span class="field-label">Purpose of Immigration:</span> ${_purposeController.text.isNotEmpty ? _purposeController.text : 'Not specified'}</div>
+    </div>
+
+    <div class="status">
+        ✅ APPLICATION STATUS: RECEIVED<br>
+        Our team will contact you within 24 hours.<br>
+        <strong>Use this Application ID for follow-up: $applicationId</strong>
+    </div>
+
+    <div class="action-required">
+        <strong>🚀 ACTION REQUIRED:</strong> Please contact the client within 24 hours for initial consultation.
+    </div>
+
+    <div class="footer">
+        <strong>Best regards,</strong><br>
+        JRR Immigration Advisory Team<br>
+        <em>We work beyond borders</em>
+    </div>
+</body>
+</html>
+''';
+}
+
+  Future<bool> _sendEmailViaResendAPI(String subject, String body, String htmlBody, String applicationId) async {
     try {
       final response = await SupabaseStorageService.sendApplicationEmail(
         subject: subject,
         body: body,
+        htmlBody: htmlBody, // Add this parameter to your Supabase service
         toEmails: ['jrrindia@gmail.com'],
         ccEmails: ['jrrgoindia@gmail.com'],
-        applicationId: '',
+        applicationId: applicationId,
         receiptUrl: null,
       );
       
@@ -166,16 +274,38 @@ JRR Immigration Advisory Team
     }
   }
 
-  void _showFinalSuccessDialog() {
+  void _showFinalSuccessDialog(String applicationId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Request Sent Successfully'),
+        title: Text('Request Sent Successfully', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Your immigration advice request has been sent to our team.'),
+            Text('Your immigration advice request has been sent to our team.', style: GoogleFonts.inter()),
+            const SizedBox(height: 12),
+            
+            // Application ID display
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                border: Border.all(color: Colors.blue),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('📋 Application ID:', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 4),
+                  Text(applicationId, style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue[700])),
+                  const SizedBox(height: 8),
+                  Text('Please save this ID for tracking your application', style: GoogleFonts.inter(fontSize: 12)),
+                ],
+              ),
+            ),
+            
             const SizedBox(height: 12),
             const Text('✓ Data sent to backend team for processing'),
             const SizedBox(height: 8),
@@ -188,9 +318,9 @@ JRR Immigration Advisory Team
                 border: Border.all(color: Colors.green),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
+              child: Text(
                 'Our team will contact you within 24 hours.',
-                style: TextStyle(color: Colors.green),
+                style: GoogleFonts.inter(color: Colors.green, fontSize: 12),
               ),
             ),
           ],
@@ -208,16 +338,38 @@ JRR Immigration Advisory Team
     );
   }
 
-  void _showManualEmailOption(String subject, String body) {
+  void _showManualEmailOption(String subject, String body, String applicationId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Alternative Submission Method'),
+        title: Text('Alternative Submission Method', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Your request has been prepared. You can:'),
+              Text('Your request has been prepared. You can:', style: GoogleFonts.inter()),
+              
+              // Application ID display
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  border: Border.all(color: Colors.orange),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('📋 Your Application ID:', style: GoogleFonts.inter(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 4),
+                    Text(applicationId, style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange[700])),
+                    const SizedBox(height: 4),
+                    Text('Save this ID for tracking', style: GoogleFonts.inter(fontSize: 11)),
+                  ],
+                ),
+              ),
+              
               const SizedBox(height: 16),
               
               Container(
@@ -230,25 +382,26 @@ JRR Immigration Advisory Team
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       '📧 Option 1: Auto-Send (Recommended)',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.blue),
                     ),
                     const SizedBox(height: 8),
-                    const Text('We\'ll send your request directly to our team.'),
+                    Text('We\'ll send your request directly to our team.', style: GoogleFonts.inter()),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
-                          _sendEmailViaResendAPI(subject, body);
+                          final htmlBody = _generateHtmlEmailBody(applicationId);
+                          _sendEmailViaResendAPI(subject, body, htmlBody, applicationId);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF1E88E5),
                           foregroundColor: Colors.white,
                         ),
-                        child: const Text('Send Automatically'),
+                        child: Text('Send Automatically', style: GoogleFonts.inter()),
                       ),
                     ),
                   ],
@@ -267,12 +420,12 @@ JRR Immigration Advisory Team
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       '✉️ Option 2: Send via Email App',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.green),
                     ),
                     const SizedBox(height: 8),
-                    const Text('Open your email app with pre-filled content.'),
+                    Text('Open your email app with pre-filled content.', style: GoogleFonts.inter()),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
@@ -284,7 +437,7 @@ JRR Immigration Advisory Team
                         style: OutlinedButton.styleFrom(
                           side: const BorderSide(color: Colors.green),
                         ),
-                        child: const Text('Open Email App'),
+                        child: Text('Open Email App', style: GoogleFonts.inter()),
                       ),
                     ),
                   ],
@@ -296,7 +449,7 @@ JRR Immigration Advisory Team
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text('Cancel', style: GoogleFonts.inter()),
           ),
         ],
       ),
@@ -416,6 +569,7 @@ JRR Immigration Advisory Team
     _targetCountryController.clear();
     _visaTypeController.clear();
     _purposeController.clear();
+    _otherAdviceController.clear();
   }
 
   void _updatePurposeCharCount(String text) {
@@ -428,14 +582,288 @@ JRR Immigration Advisory Team
   Widget _buildDropdownMenuItem(String value) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       child: Text(
         value,
         style: GoogleFonts.inter(
           fontSize: 14,
+          height: 1.4,
         ),
-        overflow: TextOverflow.ellipsis,
+        overflow: TextOverflow.visible,
         maxLines: 2,
+        softWrap: true,
+      ),
+    );
+  }
+
+  // "Other" advice type text field
+  Widget _buildOtherAdviceField() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: TextFormField(
+        controller: _otherAdviceController,
+        decoration: const InputDecoration(
+          labelText: 'Please specify your advice need *',
+          hintText: 'Describe the type of advice you need',
+          border: OutlineInputBorder(),
+          prefixIcon: Icon(Icons.edit),
+          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        ),
+        validator: (value) {
+          if (_selectedAdviceType == 'Other' && (value == null || value.isEmpty)) {
+            return 'Please specify your advice need';
+          }
+          return null;
+        },
+      ),
+    );
+  }
+
+  // Assured Visa Service Widget - UPDATED: Removed boxes and chips
+  Widget _buildAssuredVisaService() {
+    return Card(
+      elevation: 3,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.blue.shade200, width: 1),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header - UPDATED: Removed box, kept as plain text
+            Text(
+              'PREMIUM SERVICE',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.green.shade800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // Title and Price
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Assured Visa Service',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '₹99,999',
+                        style: GoogleFonts.inter(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade700,
+                        ),
+                      ),
+                      Text(
+                        'Visa Approved or Get 100% Refund',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // UPDATED: Removed box from GUARANTEED badge
+                Text(
+                  'GUARANTEED',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade800,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Description
+            Text(
+              'Our premium service gives you complete confidence. If your visa is not approved, we refund the full service fee (T&C apply).',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                color: Colors.grey.shade700,
+                height: 1.4,
+              ),
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // What You Get Section - UPDATED: Replaced chips with bullet points
+            Text(
+              'What You Get',
+              style: GoogleFonts.inter(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
+              ),
+            ),
+            const SizedBox(height: 12),
+            
+            // UPDATED: Bullet points instead of chips
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildBulletPoint('Priority processing'),
+                _buildBulletPoint('Detailed document verification'),
+                _buildBulletPoint('Strong cover letter & travel plan'),
+                _buildBulletPoint('Visa application preparation'),
+                _buildBulletPoint('Appointment scheduling'),
+                _buildBulletPoint('Dedicated case officer'),
+                _buildBulletPoint('Unlimited consultation'),
+                _buildBulletPoint('Refund Guarantee (T&C Apply)'),
+              ],
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Refund Guarantee Section - UPDATED: Removed box
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Refund Guarantee (T&C Apply)',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'You receive 100% refund if:',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green.shade700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '• All documents are genuine\n'
+                  '• No information is hidden\n'
+                  '• You meet eligibility & financial requirements\n'
+                  '• Embassy refusal happens despite a complete, strong file',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: Colors.green.shade700,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 20),
+            
+            // Eligible Countries
+            Text(
+              'Eligible Countries',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'USA | UK | Schengen (Europe) | Canada',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.grey.shade700,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '(USA cases will be approved after eligibility screening.)',
+              style: GoogleFonts.inter(
+                fontSize: 11,
+                color: Colors.grey.shade600,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Suitable For
+            Text(
+              'Suitable For',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Business Travelers • Family Visitors • Frequent Travelers • Corporate Travelers',
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.grey.shade700,
+              ),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Footer - UPDATED: Removed box
+            SizedBox(
+              width: double.infinity,
+              child: Text(
+                'JRR Immigration – We work beyond borders',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade800,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Helper method for bullet points
+  Widget _buildBulletPoint(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '• ',
+            style: GoogleFonts.inter(
+              color: Colors.blue.shade800,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -444,12 +872,48 @@ JRR Immigration Advisory Team
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Immigration Advice',
-          style: GoogleFonts.inter(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isWideScreen = constraints.maxWidth > 600;
+            final bool isVeryWideScreen = constraints.maxWidth > 900;
+            
+            return Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Actual JRR Logo with error handling
+                Image.asset(
+                  'assets/images/JRR Logo.png',
+                  width: isVeryWideScreen ? 48 : (isWideScreen ? 40 : 32),
+                  height: isVeryWideScreen ? 48 : (isWideScreen ? 40 : 32),
+                  errorBuilder: (context, error, stackTrace) {
+                    // Fallback to icon if logo fails to load
+                    return Container(
+                      width: isVeryWideScreen ? 48 : (isWideScreen ? 40 : 32),
+                      height: isVeryWideScreen ? 48 : (isWideScreen ? 40 : 32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.flag,
+                        color: const Color(0xFF1E88E5),
+                        size: isVeryWideScreen ? 32 : (isWideScreen ? 28 : 24),
+                      ),
+                    );
+                  },
+                ),
+                SizedBox(width: isVeryWideScreen ? 20 : (isWideScreen ? 16 : 12)),
+                Text(
+                  isVeryWideScreen ? 'JRR Immigration Services' : 'JRR Immigration',
+                  style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    fontSize: isVeryWideScreen ? 22 : (isWideScreen ? 20 : 18),
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         backgroundColor: const Color(0xFF1E88E5),
         foregroundColor: Colors.white,
@@ -463,6 +927,9 @@ JRR Immigration Advisory Team
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
+                // Assured Visa Service Section
+                _buildAssuredVisaService(),
+
                 Card(
                   elevation: 1,
                   color: Colors.blue[50],
@@ -485,6 +952,7 @@ JRR Immigration Advisory Team
 
                 const SizedBox(height: 16),
 
+                // Rest of your existing form code remains exactly the same...
                 Card(
                   elevation: 2,
                   child: Padding(
@@ -758,53 +1226,64 @@ JRR Immigration Advisory Team
                           
                           const SizedBox(height: 12),
                           
-                          // Advice Type and Visa Type - Responsive
+                          // Advice Type and Visa Type - Responsive (WITH "OTHER" FIELD)
                           if (isWideScreen)
-                            Row(
+                            Column(
                               children: [
-                                Expanded(
-                                  child: DropdownButtonFormField<String>(
-                                    value: _selectedAdviceType,
-                                    isExpanded: true,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Type of Advice Needed *',
-                                      hintText: 'Select advice type',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.help_outline),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: DropdownButtonFormField<String>(
+                                        value: _selectedAdviceType,
+                                        isExpanded: true,
+                                        dropdownColor: Colors.white,
+                                        menuMaxHeight: 400,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Type of Advice Needed *',
+                                          hintText: 'Select advice type',
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.help_outline),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                        ),
+                                        items: _adviceTypes.map((String type) {
+                                          return DropdownMenuItem<String>(
+                                            value: type,
+                                            child: _buildDropdownMenuItem(type),
+                                          );
+                                        }).toList(),
+                                        onChanged: (String? newValue) {
+                                          setState(() {
+                                            _selectedAdviceType = newValue;
+                                            if (newValue != 'Other') {
+                                              _otherAdviceController.clear();
+                                            }
+                                          });
+                                        },
+                                        validator: (value) {
+                                          if (value == null || value.isEmpty) {
+                                            return 'Please select advice type';
+                                          }
+                                          return null;
+                                        },
+                                      ),
                                     ),
-                                    items: _adviceTypes.map((String type) {
-                                      return DropdownMenuItem<String>(
-                                        value: type,
-                                        child: _buildDropdownMenuItem(type),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      setState(() {
-                                        _selectedAdviceType = newValue;
-                                      });
-                                    },
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Please select advice type';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _visaTypeController,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Preferred Visa Type',
-                                      hintText: 'e.g., Student Visa, Work Permit',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.assignment),
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: TextFormField(
+                                        controller: _visaTypeController,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Preferred Visa Type',
+                                          hintText: 'e.g., Student Visa, Work Permit',
+                                          border: OutlineInputBorder(),
+                                          prefixIcon: Icon(Icons.assignment),
+                                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                                        ),
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
+                                // "Other" advice type field for wide screen
+                                if (_showOtherAdviceField) _buildOtherAdviceField(),
                               ],
                             )
                           else
@@ -813,6 +1292,8 @@ JRR Immigration Advisory Team
                                 DropdownButtonFormField<String>(
                                   value: _selectedAdviceType,
                                   isExpanded: true,
+                                  dropdownColor: Colors.white,
+                                  menuMaxHeight: 400,
                                   decoration: const InputDecoration(
                                     labelText: 'Type of Advice Needed *',
                                     hintText: 'Select advice type',
@@ -829,6 +1310,9 @@ JRR Immigration Advisory Team
                                   onChanged: (String? newValue) {
                                     setState(() {
                                       _selectedAdviceType = newValue;
+                                      if (newValue != 'Other') {
+                                        _otherAdviceController.clear();
+                                      }
                                     });
                                   },
                                   validator: (value) {
@@ -838,6 +1322,8 @@ JRR Immigration Advisory Team
                                     return null;
                                   },
                                 ),
+                                // "Other" advice type field for mobile
+                                if (_showOtherAdviceField) _buildOtherAdviceField(),
                                 const SizedBox(height: 12),
                                 TextFormField(
                                   controller: _visaTypeController,
@@ -858,6 +1344,8 @@ JRR Immigration Advisory Team
                           DropdownButtonFormField<String>(
                             value: _selectedTimeline,
                             isExpanded: true,
+                            dropdownColor: Colors.white,
+                            menuMaxHeight: 300,
                             decoration: const InputDecoration(
                               labelText: 'Preferred Timeline',
                               hintText: 'Select your timeline',

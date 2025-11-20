@@ -24,6 +24,22 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	
+	<!-- ADD CUSTOM URL SCHEME FOR PASSWORD RESET -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.jrr.immigration</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>jrr-immigration</string>
+			</array>
+		</dict>
+	</array>
+	
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

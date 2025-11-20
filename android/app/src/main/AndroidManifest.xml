@@ -20,21 +20,24 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- ADD THIS NEW DEEP LINK INTENT FILTER -->
+            <!-- IMPROVED DEEP LINK INTENT FILTERS FOR PASSWORD RESET -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data
-                    android:scheme="jrrimmigrationapp"
-                    android:host="reset-password" />
+                <data android:scheme="jrr-immigration" />
             </intent-filter>
+            
+            <!-- Handle https links from email -->
             <intent-filter>
-    <action android:name="android.intent.action.VIEW" />
-    <category android:name="android.intent.category.DEFAULT" />
-    <category android:name="android.intent.category.BROWSABLE" />
-    <data android:scheme="jrr-immigration" />
-</intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data 
+                    android:scheme="https"
+                    android:host="zbjowyzxujktgwqrjseh.supabase.co"
+                    android:pathPrefix="/auth/v1/verify" />
+            </intent-filter>
 
         </activity>
         

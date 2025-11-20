@@ -39,10 +39,22 @@ class _AIAssistantPopupContentState extends State<_AIAssistantPopupContent> {
   final _queryTypeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
+  // Unique application ID
+  String _applicationId = '';
+
   @override
   void initState() {
     super.initState();
     _addWelcomeMessage();
+    _generateApplicationId();
+  }
+
+  void _generateApplicationId() {
+    final now = DateTime.now();
+    final datePart = DateFormat('yyyyMMdd').format(now);
+    final timePart = DateFormat('HHmmss').format(now);
+    final random = (now.millisecondsSinceEpoch % 10000).toString().padLeft(4, '0');
+    _applicationId = 'JRR$datePart$timePart$random';
   }
 
   void _addWelcomeMessage() {
@@ -170,7 +182,8 @@ class _AIAssistantPopupContentState extends State<_AIAssistantPopupContent> {
     return '''
 **AI ASSISTANT INQUIRY - CLIENT SUBMISSION**
 
-**SUBMISSION DETAILS**
+**APPLICATION DETAILS**
+• Application ID: $_applicationId
 • Submitted: ${_emailDateFormatter.format(now)}
 • Source: AI Assistant Chat
 • Last User Query: "$lastUserMessage"
@@ -202,7 +215,7 @@ JRR GO AI Assistant System
         body: body,
         toEmails: ['jrrindia@gmail.com'],
         ccEmails: ['jrrgoindia@gmail.com'],
-        applicationId: '',
+        applicationId: _applicationId,
         receiptUrl: null,
       );
       
@@ -223,6 +236,35 @@ JRR GO AI Assistant System
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Your inquiry has been sent to our team.'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Application ID: $_applicationId',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[800],
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Please save this ID for future reference',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.blue[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
             const Text('✓ Data sent to backend team for processing'),
             const SizedBox(height: 8),
@@ -285,6 +327,22 @@ JRR GO AI Assistant System
                     const SizedBox(height: 8),
                     const Text('We\'ll send your inquiry directly to our team.'),
                     const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.blue),
+                      ),
+                      child: Text(
+                        'Application ID: $_applicationId',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -321,6 +379,22 @@ JRR GO AI Assistant System
                     ),
                     const SizedBox(height: 8),
                     const Text('Open your email app with pre-filled content.'),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.green),
+                      ),
+                      child: Text(
+                        'Application ID: $_applicationId',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
@@ -417,6 +491,22 @@ JRR GO AI Assistant System
                 ],
               ),
             ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Text(
+                'Application ID: $_applicationId',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+            ),
           ],
         ),
         actions: [
@@ -461,6 +551,8 @@ JRR GO AI Assistant System
     _phoneController.clear();
     _queryTypeController.clear();
     _messageController.clear();
+    // Generate new application ID for next submission
+    _generateApplicationId();
   }
 
   // Email validation methods
@@ -637,6 +729,29 @@ JRR GO AI Assistant System
               fontWeight: FontWeight.bold,
               color: const Color(0xFF1E88E5),
             )),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.info_outline, size: 16, color: Colors.blue[700]),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Application ID: $_applicationId',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
             
             // Name Field

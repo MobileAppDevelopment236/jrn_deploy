@@ -1,4 +1,6 @@
-// main.dart 
+// main.dart - FIXED VERSION
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
@@ -21,7 +23,7 @@ void main() async {
   await initializeDateFormatting('en_IN');
   
   // SIMPLE FIX FOR LOCALE ERROR
-  Intl.defaultLocale = 'en_IN'; // Indian time format
+  Intl.defaultLocale = 'en_IN';
 
   await dotenv.load(fileName: ".env");
 
@@ -35,7 +37,6 @@ void main() async {
   await Supabase.initialize(
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
-    
   );
 
   runApp(const MyApp());
@@ -54,6 +55,9 @@ class MyApp extends StatelessWidget {
       child: MaterialApp(
         title: 'JRR Go',
         debugShowCheckedModeBanner: false,
+        routes: {
+    '/reset-password': (context) => const ResetPasswordScreen(),
+  },
         theme: ThemeData(
           primaryColor: const Color(0xFF0D97CE),
           colorScheme: const ColorScheme.light(
@@ -121,25 +125,53 @@ class AuthGate extends StatefulWidget {
   State<AuthGate> createState() => _AuthGateState();
 }
 
-class _AuthGateState extends State<AuthGate> {
+class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   final SupabaseClient _supabase = Supabase.instance.client;
   bool _isLoading = true;
   User? _currentUser;
+  StreamSubscription<AuthState>? _authSubscription;
+  bool _isPasswordResetFlow = false;
+  //Uri? _initialDeepLink;
 
   @override
   void initState() {
     super.initState();
-    _getInitialSession();
-    
-    // Listen for auth state changes
-    _supabase.auth.onAuthStateChange.listen(_handleAuthStateChange);
+    WidgetsBinding.instance.addObserver(this);
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    await _getInitialSession();
+    await _handleInitialDeepLink();
+    _setupAuthListener();
+  }
+
+  Future<void> _handleInitialDeepLink() async {
+    try {
+      // Get initial link when app starts
+      final initialLink = _supabase.auth.currentSession;
+      if (initialLink != null) {
+        _checkForPasswordReset(initialLink);
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Error handling initial deep link: $e');
+      }
+    }
+  }
+
+  void _setupAuthListener() {
+    _authSubscription = _supabase.auth.onAuthStateChange.listen(_handleAuthStateChange);
   }
 
   void _handleAuthStateChange(AuthState data) {
     final AuthChangeEvent event = data.event;
     final Session? session = data.session;
     
-    print('🔐 Auth state changed: $event');
+    if (kDebugMode) {
+      debugPrint('🔐 Auth state changed: $event');
+      debugPrint('🔑 Session: ${session != null ? "EXISTS" : "NULL"}');
+    }
     
     if (mounted) {
       setState(() {
@@ -149,36 +181,27 @@ class _AuthGateState extends State<AuthGate> {
       final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
       authProvider.initializeUser(_currentUser);
 
-      // Handle password recovery - this works when user clicks the email link
+      // Handle password recovery - CRITICAL FIX
       if (event == AuthChangeEvent.passwordRecovery) {
-        print('🔄 Password recovery detected, navigating to reset screen');
+        if (kDebugMode) {
+          debugPrint('🎯 PASSWORD RECOVERY EVENT TRIGGERED!');
+          debugPrint('📧 User: ${session?.user.email}');
+        }
         _handlePasswordRecovery();
       }
     }
   }
 
-  Future<void> _getInitialSession() async {
-    try {
-      final currentSession = _supabase.auth.currentSession;
-      if (mounted) {
-        setState(() {
-          _currentUser = currentSession?.user;
-          _isLoading = false;
-        });
-      }
-      
-      print('👤 Initial session loaded: ${_currentUser?.email}');
-    } catch (error) {
-      print('❌ Error getting initial session: $error');
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
   void _handlePasswordRecovery() {
-    print('🚀 Navigating to Reset Password Screen');
+    if (kDebugMode) {
+      debugPrint('🚀 Handling password recovery flow...');
+    }
+    
     if (mounted) {
+      setState(() {
+        _isPasswordResetFlow = true;
+      });
+      
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
@@ -188,33 +211,105 @@ class _AuthGateState extends State<AuthGate> {
     }
   }
 
-  
+  void _checkForPasswordReset(Session? session) {
+    if (session != null) {
+      // Check if this is a password recovery session
+      final user = session.user;
+      final isRecoverySession = user.appMetadata['provider'] == 'email' && 
+                                user.aud == 'authenticated';
+      
+      if (isRecoverySession && mounted) {
+        if (kDebugMode) {
+          debugPrint('🔑 Password recovery session detected');
+        }
+        _handlePasswordRecovery();
+      }
+    }
+  }
+
+  Future<void> _getInitialSession() async {
+    try {
+      final currentSession = _supabase.auth.currentSession;
+      
+      if (mounted) {
+        setState(() {
+          _currentUser = currentSession?.user;
+          _isLoading = false;
+        });
+      }
+      
+      if (kDebugMode) {
+        debugPrint('👤 Initial session loaded: ${_currentUser?.email}');
+      }
+      
+      // Check if initial session is for password reset
+      _checkForPasswordReset(currentSession);
+      
+    } catch (error) {
+      if (kDebugMode) {
+        debugPrint('❌ Error getting initial session: $error');
+      }
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
   @override
-Widget build(BuildContext context) {
-  if (_isLoading) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFC5C9CE),
-      body: Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0D97CE)),
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Check for deep links when app resumes
+      _checkForActiveSession();
+    }
+  }
+
+  Future<void> _checkForActiveSession() async {
+    try {
+      final currentSession = _supabase.auth.currentSession;
+      _checkForPasswordReset(currentSession);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ Error checking active session: $e');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFFC5C9CE),
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0D97CE)),
+          ),
         ),
+      );
+    }
+
+    // If we're in password reset flow, show reset screen
+    if (_isPasswordResetFlow) {
+      return const ResetPasswordScreen();
+    }
+
+    final isLoggedIn = _currentUser != null;
+
+    if (mounted) {
+      final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
+      authProvider.initializeUser(_currentUser);
+    }
+
+    return Scaffold(
+      body: SafeArea(
+        child: isLoggedIn ? const HomeScreen() : const LoginScreen(),
       ),
     );
   }
 
-  final isLoggedIn = _currentUser != null;
-
-  if (mounted) {
-    final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
-    authProvider.initializeUser(_currentUser);
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authSubscription?.cancel();
+    super.dispose();
   }
-
-  // WRAP THE ENTIRE APP WITH A RESPONSIVE SCAFFOLD
-  return Scaffold(
-    body: SafeArea(
-      child: isLoggedIn ? const HomeScreen() : const LoginScreen(),
-    ),
-  );
-}
-  
 }

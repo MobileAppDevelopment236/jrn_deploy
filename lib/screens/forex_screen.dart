@@ -19,13 +19,16 @@ class _ForexScreenState extends State<ForexScreen> {
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _addressController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _sourceCurrencyController = TextEditingController();
-  final TextEditingController _targetCurrencyController = TextEditingController();
   final TextEditingController _purposeController = TextEditingController();
+  final TextEditingController _otherCurrencyController = TextEditingController();
   
   String _selectedService = 'Currency Exchange';
+  String _selectedCurrency = 'USD';
   bool _isLoading = false;
+  bool _showOtherCurrencyField = false;
+  String _applicationId = '';
 
   final List<String> _services = [
     'Currency Exchange',
@@ -35,14 +38,27 @@ class _ForexScreenState extends State<ForexScreen> {
     'Business Forex'
   ];
 
+  // Simplified currency list with OTHER option
+  final List<String> _currencies = [
+    'USD', 'EUR', 'GBP', 'AED', 'INR', 'SGD', 'CAD', 'AUD', 'OTHER'
+  ];
+
   // Validation flags
   bool _nameValidated = false;
   bool _emailValidated = false;
   bool _phoneValidated = false;
-  bool _sourceCurrencyValidated = false;
-  bool _targetCurrencyValidated = false;
+  bool _addressValidated = false;
   bool _amountValidated = false;
   bool _purposeValidated = false;
+
+  // Generate application ID
+  String _generateApplicationId() {
+    final now = DateTime.now();
+    final datePart = DateFormat('yyyyMMdd').format(now);
+    final timePart = DateFormat('HHmmss').format(now);
+    final random = DateTime.now().millisecondsSinceEpoch % 10000;
+    return 'FOREX-$datePart-$timePart-$random';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +84,7 @@ class _ForexScreenState extends State<ForexScreen> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                // Information Card - Like Immigration Screen
+                // Information Card
                 Card(
                   elevation: 1,
                   color: Colors.blue[50],
@@ -130,7 +146,7 @@ class _ForexScreenState extends State<ForexScreen> {
                           ),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<String>(
-                            initialValue: _selectedService,
+                            value: _selectedService,
                             decoration: const InputDecoration(
                               labelText: 'Select Service Type *',
                               border: OutlineInputBorder(),
@@ -188,12 +204,43 @@ class _ForexScreenState extends State<ForexScreen> {
                           ),
                           const SizedBox(height: 16),
                           
-                          // Responsive Personal Information Row
+                          // Responsive Personal Information
                           if (isPortrait && !isLargeScreen)
                             _buildPersonalInfoColumn()
                           else
                             _buildPersonalInfoRow(isLargeScreen),
 
+                          const SizedBox(height: 20),
+
+                          // Address Field
+                          TextFormField(
+                            controller: _addressController,
+                            maxLines: 3,
+                            decoration: InputDecoration(
+                              labelText: 'Full Address *',
+                              hintText: 'Enter your complete address with city, state, and PIN code',
+                              border: const OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.location_on),
+                              alignLabelWithHint: true,
+                              errorText: _addressValidated && (_addressController.text.isEmpty || _addressController.text.length < 10)
+                                  ? 'Min. 10 characters required'
+                                  : null,
+                            ),
+                            onChanged: (value) {
+                              setState(() {
+                                _addressValidated = true;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your address';
+                              }
+                              if (value.length < 10) {
+                                return 'Please provide complete address';
+                              }
+                              return null;
+                            },
+                          ),
                           const SizedBox(height: 20),
 
                           // Transaction Details Section
@@ -207,48 +254,15 @@ class _ForexScreenState extends State<ForexScreen> {
                           ),
                           const SizedBox(height: 16),
                           
-                          // Responsive Transaction Details
+                          // Currency and Amount - Responsive
                           if (isPortrait && !isLargeScreen)
-                            _buildTransactionDetailsColumn()
+                            _buildCurrencyAmountColumn()
                           else
-                            _buildTransactionDetailsRow(isLargeScreen),
+                            _buildCurrencyAmountRow(isLargeScreen),
 
                           const SizedBox(height: 12),
                           
-                          // Amount Field (Full width)
-                          TextFormField(
-                            controller: _amountController,
-                            decoration: InputDecoration(
-                              labelText: 'Amount *',
-                              border: const OutlineInputBorder(),
-                              prefixIcon: const Icon(Icons.attach_money),
-                              errorText: _amountValidated && _amountController.text.isNotEmpty && 
-                                  !RegExp(r'^[0-9]+(\.[0-9]{1,2})?$').hasMatch(_amountController.text)
-                                  ? 'Enter valid amount'
-                                  : null,
-                            ),
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            onChanged: (value) {
-                              setState(() {
-                                _amountValidated = true;
-                              });
-                            },
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter amount';
-                              }
-                              if (!RegExp(r'^[0-9]+(\.[0-9]{1,2})?$').hasMatch(value)) {
-                                return 'Please enter a valid amount';
-                              }
-                              if (double.tryParse(value) == null || double.parse(value) <= 0) {
-                                return 'Amount must be greater than 0';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          
-                          // Purpose Field (Full width)
+                          // Purpose Field
                           TextFormField(
                             controller: _purposeController,
                             maxLines: 3,
@@ -526,65 +540,84 @@ class _ForexScreenState extends State<ForexScreen> {
     );
   }
 
-  // Transaction Details in Column (for portrait mode)
-  Widget _buildTransactionDetailsColumn() {
+  // Currency and Amount in Column (for portrait mode)
+  Widget _buildCurrencyAmountColumn() {
     return Column(
       children: [
-        TextFormField(
-          controller: _sourceCurrencyController,
-          decoration: InputDecoration(
-            labelText: 'From Currency *',
-            hintText: 'e.g., USD',
-            border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.currency_bitcoin),
-            errorText: _sourceCurrencyValidated && (_sourceCurrencyController.text.isEmpty || _sourceCurrencyController.text.length != 3)
-                ? '3-letter code'
-                : null,
+        DropdownButtonFormField<String>(
+          value: _selectedCurrency,
+          decoration: const InputDecoration(
+            labelText: 'Currency *',
+            border: OutlineInputBorder(),
+            prefixIcon: Icon(Icons.currency_exchange),
           ),
-          onChanged: (value) {
+          items: _currencies.map<DropdownMenuItem<String>>((String currency) {
+            return DropdownMenuItem<String>(
+              value: currency,
+              child: Text(currency),
+            );
+          }).toList(),
+          onChanged: (String? newValue) {
             setState(() {
-              _sourceCurrencyValidated = true;
+              _selectedCurrency = newValue ?? 'USD';
+              _showOtherCurrencyField = (newValue == 'OTHER');
+              if (!_showOtherCurrencyField) {
+                _otherCurrencyController.clear();
+              }
             });
-          },
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Enter currency code';
-            }
-            if (value.length != 3) {
-              return 'Currency code must be 3 letters';
-            }
-            if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(value)) {
-              return 'Only letters allowed';
-            }
-            return null;
           },
         ),
         const SizedBox(height: 12),
+        
+        // Other Currency Input Field
+        if (_showOtherCurrencyField)
+          TextFormField(
+            controller: _otherCurrencyController,
+            decoration: const InputDecoration(
+              labelText: 'Specify Currency *',
+              hintText: 'Enter currency code (e.g., JPY, CHF, etc.)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.edit),
+            ),
+            validator: (value) {
+              if (_showOtherCurrencyField && (value == null || value.isEmpty)) {
+                return 'Please specify currency';
+              }
+              if (_showOtherCurrencyField && value != null && 
+                  !RegExp(r'^[A-Za-z]{3}$').hasMatch(value)) {
+                return 'Enter 3-letter currency code';
+              }
+              return null;
+            },
+          ),
+        if (_showOtherCurrencyField) const SizedBox(height: 12),
+        
         TextFormField(
-          controller: _targetCurrencyController,
+          controller: _amountController,
           decoration: InputDecoration(
-            labelText: 'To Currency *',
-            hintText: 'e.g., EUR',
+            labelText: 'Amount *',
             border: const OutlineInputBorder(),
-            prefixIcon: const Icon(Icons.currency_yen),
-            errorText: _targetCurrencyValidated && (_targetCurrencyController.text.isEmpty || _targetCurrencyController.text.length != 3)
-                ? '3-letter code'
+            prefixIcon: const Icon(Icons.attach_money),
+            errorText: _amountValidated && _amountController.text.isNotEmpty && 
+                !RegExp(r'^[0-9]+(\.[0-9]{1,2})?$').hasMatch(_amountController.text)
+                ? 'Enter valid amount'
                 : null,
           ),
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
           onChanged: (value) {
             setState(() {
-              _targetCurrencyValidated = true;
+              _amountValidated = true;
             });
           },
           validator: (value) {
             if (value == null || value.isEmpty) {
-              return 'Enter currency code';
+              return 'Please enter amount';
             }
-            if (value.length != 3) {
-              return 'Currency code must be 3 letters';
+            if (!RegExp(r'^[0-9]+(\.[0-9]{1,2})?$').hasMatch(value)) {
+              return 'Please enter a valid amount';
             }
-            if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(value)) {
-              return 'Only letters allowed';
+            if (double.tryParse(value) == null || double.parse(value) <= 0) {
+              return 'Amount must be greater than 0';
             }
             return null;
           },
@@ -593,74 +626,98 @@ class _ForexScreenState extends State<ForexScreen> {
     );
   }
 
-  // Transaction Details in Row (for landscape mode)
-  Widget _buildTransactionDetailsRow(bool isLargeScreen) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  // Currency and Amount in Row (for landscape mode)
+  Widget _buildCurrencyAmountRow(bool isLargeScreen) {
+    return Column(
       children: [
-        Expanded(
-          child: TextFormField(
-            controller: _sourceCurrencyController,
-            decoration: InputDecoration(
-              labelText: 'From Currency *',
-              hintText: 'e.g., USD',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.currency_bitcoin),
-              errorText: _sourceCurrencyValidated && (_sourceCurrencyController.text.isEmpty || _sourceCurrencyController.text.length != 3)
-                  ? '3-letter code'
-                  : null,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 1,
+              child: DropdownButtonFormField<String>(
+                value: _selectedCurrency,
+                decoration: const InputDecoration(
+                  labelText: 'Currency *',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.currency_exchange),
+                ),
+                items: _currencies.map<DropdownMenuItem<String>>((String currency) {
+                  return DropdownMenuItem<String>(
+                    value: currency,
+                    child: Text(currency),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    _selectedCurrency = newValue ?? 'USD';
+                    _showOtherCurrencyField = (newValue == 'OTHER');
+                    if (!_showOtherCurrencyField) {
+                      _otherCurrencyController.clear();
+                    }
+                  });
+                },
+              ),
             ),
-            onChanged: (value) {
-              setState(() {
-                _sourceCurrencyValidated = true;
-              });
-            },
+            SizedBox(width: isLargeScreen ? 16 : 12),
+            Expanded(
+              flex: 2,
+              child: TextFormField(
+                controller: _amountController,
+                decoration: InputDecoration(
+                  labelText: 'Amount *',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.attach_money),
+                  errorText: _amountValidated && _amountController.text.isNotEmpty && 
+                      !RegExp(r'^[0-9]+(\.[0-9]{1,2})?$').hasMatch(_amountController.text)
+                      ? 'Enter valid amount'
+                      : null,
+                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                onChanged: (value) {
+                  setState(() {
+                    _amountValidated = true;
+                  });
+                },
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter amount';
+                  }
+                  if (!RegExp(r'^[0-9]+(\.[0-9]{1,2})?$').hasMatch(value)) {
+                    return 'Please enter a valid amount';
+                  }
+                  if (double.tryParse(value) == null || double.parse(value) <= 0) {
+                    return 'Amount must be greater than 0';
+                  }
+                  return null;
+                },
+              ),
+            ),
+          ],
+        ),
+        
+        // Other Currency Input Field
+        if (_showOtherCurrencyField) const SizedBox(height: 12),
+        if (_showOtherCurrencyField)
+          TextFormField(
+            controller: _otherCurrencyController,
+            decoration: const InputDecoration(
+              labelText: 'Specify Currency *',
+              hintText: 'Enter currency code (e.g., JPY, CHF, etc.)',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.edit),
+            ),
             validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Enter currency code';
+              if (_showOtherCurrencyField && (value == null || value.isEmpty)) {
+                return 'Please specify currency';
               }
-              if (value.length != 3) {
-                return 'Currency code must be 3 letters';
-              }
-              if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(value)) {
-                return 'Only letters allowed';
+              if (_showOtherCurrencyField && value != null && 
+                  !RegExp(r'^[A-Za-z]{3}$').hasMatch(value)) {
+                return 'Enter 3-letter currency code';
               }
               return null;
             },
           ),
-        ),
-        SizedBox(width: isLargeScreen ? 16 : 12),
-        Expanded(
-          child: TextFormField(
-            controller: _targetCurrencyController,
-            decoration: InputDecoration(
-              labelText: 'To Currency *',
-              hintText: 'e.g., EUR',
-              border: const OutlineInputBorder(),
-              prefixIcon: const Icon(Icons.currency_yen),
-              errorText: _targetCurrencyValidated && (_targetCurrencyController.text.isEmpty || _targetCurrencyController.text.length != 3)
-                  ? '3-letter code'
-                  : null,
-            ),
-            onChanged: (value) {
-              setState(() {
-                _targetCurrencyValidated = true;
-              });
-            },
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Enter currency code';
-              }
-              if (value.length != 3) {
-                return 'Currency code must be 3 letters';
-              }
-              if (!RegExp(r'^[A-Za-z]{3}$').hasMatch(value)) {
-                return 'Only letters allowed';
-              }
-              return null;
-            },
-          ),
-        ),
       ],
     );
   }
@@ -783,20 +840,16 @@ class _ForexScreenState extends State<ForexScreen> {
     );
   }
 
-  // ... REST OF YOUR EXISTING METHODS REMAIN EXACTLY THE SAME ...
-  // _submitForm(), _generateAndSendForexEmail(), _generateEmailBody(),
-  // _sendEmailViaResendAPI(), _showFinalSuccessDialog(), _showManualEmailOption(),
-  // _launchEmailApp(), _buildProperlyEncodedEmailUrl(), _showSuccessDialog(),
-  // _showErrorDialog(), _resetForm(), dispose() methods remain unchanged
-
   void _submitForm() async {
+    // Generate application ID before submission
+    _applicationId = _generateApplicationId();
+    
     // Mark all fields as validated
     setState(() {
       _nameValidated = true;
       _emailValidated = true;
       _phoneValidated = true;
-      _sourceCurrencyValidated = true;
-      _targetCurrencyValidated = true;
+      _addressValidated = true;
       _amountValidated = true;
       _purposeValidated = true;
     });
@@ -812,7 +865,6 @@ class _ForexScreenState extends State<ForexScreen> {
         _isLoading = false;
       });
     } else {
-      // Show error if validation fails
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -826,7 +878,7 @@ class _ForexScreenState extends State<ForexScreen> {
 
   Future<void> _generateAndSendForexEmail() async {
     try {
-      final subject = 'JRR GO Forex Service Request - ${_nameController.text}';
+      final subject = 'JRR GO Forex Service Request - ${_nameController.text} - $_applicationId';
       final body = _generateEmailBody();
 
       final emailSent = await _sendEmailViaResendAPI(subject, body);
@@ -841,19 +893,23 @@ class _ForexScreenState extends State<ForexScreen> {
     } catch (error) {
       if (!mounted) return;
       debugPrint('Email sending error: $error');
-      final subject = 'JRR GO Forex Service Request - ${_nameController.text}';
+      final subject = 'JRR GO Forex Service Request - ${_nameController.text} - $_applicationId';
       final body = _generateEmailBody();
       _showManualEmailOption(subject, body);
     }
   }
 
   String _generateEmailBody() {
-  final now = DateTime.now();
-  
-  return '''
+    final now = DateTime.now();
+    final String displayCurrency = _showOtherCurrencyField 
+        ? _otherCurrencyController.text.toUpperCase()
+        : _selectedCurrency;
+    
+    return '''
 **FOREX SERVICE REQUEST - CLIENT SUBMISSION**
 
-**SUBMISSION DETAILS**
+**APPLICATION DETAILS**
+• Application ID: $_applicationId
 • Submitted: ${_emailDateFormatter.format(now)}
 • Service Type: $_selectedService
 
@@ -861,12 +917,11 @@ class _ForexScreenState extends State<ForexScreen> {
 • Full Name: ${_nameController.text}
 • Email Address: ${_emailController.text}
 • Phone Number: ${_phoneController.text}
+• Address: ${_addressController.text}
 
 **TRANSACTION DETAILS**
-• Source Currency: ${_sourceCurrencyController.text.toUpperCase()}
-• Target Currency: ${_targetCurrencyController.text.toUpperCase()}
-• Amount: ${_amountController.text} ${_sourceCurrencyController.text.toUpperCase()}
-• Conversion Request: ${_sourceCurrencyController.text.toUpperCase()} to ${_targetCurrencyController.text.toUpperCase()}
+• Currency: $displayCurrency
+• Amount: ${_amountController.text} $displayCurrency
 
 **PURPOSE OF TRANSACTION**
 ${_purposeController.text}
@@ -875,12 +930,13 @@ ${_purposeController.text}
 Please provide forex services and current exchange rates for the above transaction.
 
 ---
+**APPLICATION ID FOR TRACKING:** $_applicationId
 **ACTION REQUIRED:** Please contact the client within 2 hours with current exchange rates and processing details.
 
 Best regards,
 JRR Forex Services Team
 ''';
-}
+  }
 
   Future<bool> _sendEmailViaResendAPI(String subject, String body) async {
     try {
@@ -889,7 +945,7 @@ JRR Forex Services Team
         body: body,
         toEmails: ['jrrindia@gmail.com'],
         ccEmails: ['jrrgoindia@gmail.com'],
-        applicationId: 'FOREX-${DateTime.now().millisecondsSinceEpoch}',
+        applicationId: _applicationId,
         receiptUrl: null,
       );
       
@@ -910,6 +966,33 @@ JRR Forex Services Team
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Your forex service request has been sent to our team.'),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                border: Border.all(color: Colors.blue),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Application ID: $_applicationId',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Please save this ID for tracking your request.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 12),
             const Text('✓ Data sent to backend team for processing'),
             const SizedBox(height: 8),
@@ -952,6 +1035,41 @@ JRR Forex Services Team
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text('Your request has been prepared. You can:'),
+              const SizedBox(height: 16),
+              
+              // Application ID Display
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Application ID for Tracking:',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _applicationId,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Please save this ID for tracking your request.',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                  ],
+                ),
+              ),
+              
               const SizedBox(height: 16),
               
               Container(
@@ -1103,6 +1221,38 @@ JRR Forex Services Team
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Application ID for Tracking:',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _applicationId,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Please save this ID for tracking your request.',
+                    style: TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
@@ -1141,26 +1291,24 @@ JRR Forex Services Team
     _nameController.clear();
     _emailController.clear();
     _phoneController.clear();
+    _addressController.clear();
     _amountController.clear();
-    _sourceCurrencyController.clear();
-    _targetCurrencyController.clear();
     _purposeController.clear();
+    _otherCurrencyController.clear();
     
     setState(() {
       _selectedService = 'Currency Exchange';
+      _selectedCurrency = 'USD';
+      _showOtherCurrencyField = false;
       _nameValidated = false;
       _emailValidated = false;
       _phoneValidated = false;
-      _sourceCurrencyValidated = false;
-      _targetCurrencyValidated = false;
+      _addressValidated = false;
       _amountValidated = false;
       _purposeValidated = false;
+      _isLoading = false;
+      _applicationId = '';
     });
-    
-    // Close any open dialogs
-    if (mounted && Navigator.canPop(context)) {
-      Navigator.pop(context);
-    }
   }
 
   @override
@@ -1168,10 +1316,10 @@ JRR Forex Services Team
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
+    _addressController.dispose();
     _amountController.dispose();
-    _sourceCurrencyController.dispose();
-    _targetCurrencyController.dispose();
     _purposeController.dispose();
+    _otherCurrencyController.dispose();
     super.dispose();
   }
 }

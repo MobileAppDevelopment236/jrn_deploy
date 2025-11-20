@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:jrr_immigration_app/services/auth_service.dart';
 import 'package:jrr_immigration_app/screens/auth/login_screen.dart';
+import 'package:jrr_immigration_app/screens/auth/verification_pending_screen.dart';
+
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -31,22 +33,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
 
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Passwords do not match'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Passwords do not match'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
     if (!_agreeToTerms) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please agree to the terms and conditions'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please agree to the terms and conditions'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
@@ -75,19 +81,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
             fullName: fullName,
           );
         } catch (profileError) {
-          // Log profile error but don't prevent signup
-          print('Profile creation error: $profileError');
+          // Profile creation error - we can continue without profile
         }
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Account created successfully! Please check your email for verification.'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
+        // SUCCESS: Navigate to verification pending screen
+Navigator.of(context).pushReplacement(
+  MaterialPageRoute(
+    builder: (context) => VerificationPendingScreen(email: _emailController.text),
+  ),
+);
       }
       
     } catch (error) {
@@ -108,10 +110,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _navigateToLogin() {
-    Navigator.of(context).pushReplacement(
+  if (mounted) {
+    Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (context) => const LoginScreen()),
+      (route) => false,
     );
   }
+}
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
@@ -184,7 +189,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     children: [
                       // Logo
                       Image.asset(
-                        'assets/images/logo.png',
+                        'assets/images/JRR Logo.png',
                         width: 80,
                         height: 80,
                         errorBuilder: (context, error, stackTrace) {

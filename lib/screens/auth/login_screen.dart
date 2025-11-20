@@ -22,41 +22,104 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _rememberMe = false;
 
   Future<void> _signIn() async {
-    if (!_formKey.currentState!.validate()) {
-      setState(() => _autoValidate = true);
-      return;
-    }
+  if (!_formKey.currentState!.validate()) {
+    setState(() => _autoValidate = true);
+    return;
+  }
 
-    setState(() => _isLoading = true);
+  setState(() => _isLoading = true);
+  
+  try {
+    final user = await _authService.signIn(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
     
-    try {
-      final user = await _authService.signIn(
-        email: _emailController.text,
-        password: _passwordController.text,
+    if (mounted && user != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const MainScreen()),
       );
-      
-      if (mounted && user != null) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const MainScreen()),
-        );
-      }
-      
-    } catch (error) {
-      if (mounted) {
+    }
+    
+  } catch (error) {
+    final errorMessage = error.toString().replaceAll('Exception: ', '');
+    
+    if (mounted) {
+      if (errorMessage.contains('Email not verified')) {
+        // Show specific message for unverified email
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: ${error.toString().replaceAll('Exception: ', '')}'),
+            content: Text(errorMessage),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'Resend',
+              textColor: Colors.white,
+              onPressed: () {
+                // You could add resend functionality here
+                _showResendVerificationDialog();
+              },
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login failed: $errorMessage'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+    }
+  } finally {
+    if (mounted) {
+      setState(() => _isLoading = false);
     }
   }
+}
+
+void _showResendVerificationDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Resend Verification Email'),
+      content: const Text('Would you like us to send a new verification email?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.of(context).pop();
+            try {
+              await _authService.resendEmailConfirmation(_emailController.text);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Verification email sent! Check your inbox.'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } catch (e) {
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Failed to resend: ${e.toString()}'),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
+          },
+          child: const Text('Resend'),
+        ),
+      ],
+    ),
+  );
+}
 
   void _navigateToSignUp() {
     Navigator.of(context).push(
@@ -361,7 +424,7 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         // Your actual logo - make sure the path is correct
         Image.asset(
-          'assets/images/logo.png', // Update this path to your actual logo
+          'assets/images/JRR Logo.png', 
           width: 120,
           height: 120,
           errorBuilder: (context, error, stackTrace) {

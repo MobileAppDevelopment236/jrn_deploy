@@ -27,6 +27,9 @@ class _TabbedDashboardScreenState extends State<TabbedDashboardScreen> {
   static const Color _cardColor = Colors.white;
   static const Color _textSecondary = Color(0xFF666666);
 
+  // ScrollController for the main content
+  final ScrollController _scrollController = ScrollController();
+
   // Service Items Data
   final List<ServiceSection> _serviceSections = [
     ServiceSection(
@@ -132,6 +135,12 @@ class _TabbedDashboardScreenState extends State<TabbedDashboardScreen> {
   ];
 
   @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _backgroundColor,
@@ -143,12 +152,20 @@ class _TabbedDashboardScreenState extends State<TabbedDashboardScreen> {
 
   // Build Methods
   Widget _buildBody() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          _buildHeader(),
-          _buildContent(),
-        ],
+    return Scrollbar(
+      controller: _scrollController,
+      thumbVisibility: true, // Always show the scrollbar thumb
+      trackVisibility: true, // Always show the scrollbar track
+      thickness: 8.0, // Slightly thicker for better visibility
+      radius: const Radius.circular(4.0), // Rounded corners
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        child: Column(
+          children: [
+            _buildHeader(),
+            _buildContent(),
+          ],
+        ),
       ),
     );
   }

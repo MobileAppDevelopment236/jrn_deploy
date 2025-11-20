@@ -226,6 +226,7 @@ class SupabaseStorageService {
   static Future<bool> sendApplicationEmail({
     required String subject,
     required String body,
+    String? htmlBody,
     required List<String> toEmails,
     required List<String> ccEmails,
     required String applicationId,
@@ -381,7 +382,7 @@ static Future<String> uploadPaymentReceipt({
       debugPrint('📦 Storage error uploading payment receipt $fileName: $e');
       
       // If bucket doesn't exist, provide clear instructions
-      if (e.message?.contains('Bucket not found') == true) {
+      if (e.message.contains('Bucket not found') == true) {
         debugPrint('❌ PAYMENT-RECEIPTS bucket not found. Please create it in Supabase dashboard.');
         debugPrint('💡 Create bucket named: PAYMENT-RECEIPTS in Storage section');
       }

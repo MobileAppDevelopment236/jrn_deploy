@@ -1,10 +1,12 @@
-// lib/screens/profile_screen.dart - FIXED VERSION
+// lib/screens/profile_screen.dart
 import 'dart:developer' as developer;
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'track_status_screen.dart';
+import 'payment_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,8 +21,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   
   Map<String, dynamic>? _userProfile;
   List<Map<String, dynamic>> _applications = [];
-  List<Map<String, dynamic>> _userServices = [];
   bool _isLoading = true;
+  bool _isRefreshing = false;
 
   @override
   void initState() {
@@ -28,173 +30,164 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _loadUserData();
   }
 
-  // FIXED: Proper type handling for Future.wait
-  Future<void> _loadUserData() async {
+  Future<void> _loadUserData({bool forceRefresh = false}) async {
     try {
       final user = _supabase.auth.currentUser;
-      if (user != null) {
-        // Load all data in parallel with proper type handling
-        final List<Future<dynamic>> futures = [
-          // Profile data
-          _supabase
-              .from('profiles')
-              .select()
-              .eq('id', user.id)
-              .single(),
-          // Applications data with error handling
-          _supabase
-              .from('applications')
-              .select()
-              .eq('email', user.email ?? 'no-email')
-              .order('created_at', ascending: false)
-              .then((data) => data, onError: (e) {
-                developer.log('Error loading applications: $e', name: 'ProfileScreen');
-                return [];
-              }),
-          // Services data with error handling
-          _supabase
-              .from('user_services')
-              .select()
-              .eq('user_id', user.id)
-              .eq('is_active', true)
-              .order('created_at', ascending: false)
-              .then((data) => data, onError: (e) {
-                developer.log('Services table not available: $e', name: 'ProfileScreen');
-                return [];
-              }),
-        ];
+      if (user == null) {
+        if (mounted) setState(() => _isLoading = false);
+        return;
+      }
 
-        final results = await Future.wait(futures);
+      if (mounted && !forceRefresh) {
+        setState(() => _isLoading = true);
+      } else if (mounted && forceRefresh) {
+        setState(() => _isRefreshing = true);
+      }
 
-        if (mounted) {
-          setState(() {
-            _userProfile = results[0] as Map<String, dynamic>?;
-            _applications = List<Map<String, dynamic>>.from(results[1] as List);
-            _userServices = List<Map<String, dynamic>>.from(results[2] as List);
-            _isLoading = false;
+      // Load profile data
+      final profileData = await _supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .single()
+          .timeout(const Duration(seconds: 10));
+
+      // Load applications
+      final applicationsData = await _supabase
+          .from('applications')
+          .select()
+          .eq('email', user.email ?? 'no-email')
+          .order('created_at', ascending: false)
+          .timeout(const Duration(seconds: 10))
+          .catchError((e) {
+            developer.log('Error loading applications: $e', name: 'ProfileScreen');
+            return <Map<String, dynamic>>[];
           });
-        }
-      } else {
-        if (mounted) {
-          setState(() => _isLoading = false);
-        }
+
+      if (mounted) {
+        setState(() {
+          _userProfile = profileData;
+          _applications = List<Map<String, dynamic>>.from(applicationsData);
+          _isLoading = false;
+          _isRefreshing = false;
+        });
       }
     } catch (e) {
       developer.log('Error loading profile data: $e', name: 'ProfileScreen');
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _isRefreshing = false;
+        });
       }
     }
   }
 
-// FIXED: Better async context handling with proper mounted checks
-Future<void> _updateProfilePhoto() async {
-  if (!mounted) return;
+  Future<void> _updateProfilePhoto() async {
+    if (!mounted) return;
 
-  try {
-    final source = await showDialog<ImageSource>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose Source'),
-        content: const Text('Select photo source'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, ImageSource.camera),
-            child: const Text('Camera'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, ImageSource.gallery),
-            child: const Text('Gallery'),
-          ),
-        ],
+    try {
+      final source = await showDialog<ImageSource>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Choose Source'),
+          content: const Text('Select photo source'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, ImageSource.camera),
+              child: const Text('Camera'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, ImageSource.gallery),
+              child: const Text('Gallery'),
+            ),
+          ],
+        ),
+      );
+
+      if (source == null || !mounted) return;
+
+      final XFile? image = await _imagePicker.pickImage(
+        source: source,
+        maxWidth: 400,
+        maxHeight: 400,
+        imageQuality: 70,
+      );
+      
+      if (image != null && mounted) {
+        _showSnackBar('Uploading photo...', isProgress: true);
+        
+        final user = _supabase.auth.currentUser!;
+        final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final fileBytes = await image.readAsBytes();
+        
+        try {
+          await _supabase.storage
+              .from('avatars')
+              .uploadBinary(fileName, fileBytes, fileOptions: const FileOptions(upsert: true));
+          
+          final avatarUrl = _supabase.storage
+              .from('avatars')
+              .getPublicUrl(fileName);
+          
+          await _supabase
+              .from('profiles')
+              .update({
+                'avatar_url': avatarUrl,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
+              .eq('id', user.id);
+          
+          if (mounted) {
+            _hideCurrentSnackBar();
+            await _loadUserData(forceRefresh: true);
+            _showSnackBar('Profile photo updated successfully!', isSuccess: true);
+          }
+        } catch (uploadError) {
+          if (mounted) {
+            _hideCurrentSnackBar();
+            _showSnackBar('Failed to upload photo. Please try again.', isError: true);
+          }
+        }
+      }
+    } catch (e) {
+      developer.log('Error updating photo: $e', name: 'ProfileScreen');
+      if (mounted) {
+        _hideCurrentSnackBar();
+        _showSnackBar('Failed to update photo. Please try again.', isError: true);
+      }
+    }
+  }
+
+  void _showSnackBar(String message, {bool isProgress = false, bool isSuccess = false, bool isError = false}) {
+    if (!mounted) return;
+    
+    Color backgroundColor = Colors.grey;
+    if (isSuccess) backgroundColor = Colors.green;
+    if (isError) backgroundColor = Colors.red;
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: isProgress
+            ? Row(
+                children: [
+                  const CircularProgressIndicator(color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(message)),
+                ],
+              )
+            : Text(message),
+        backgroundColor: backgroundColor,
+        duration: isProgress ? const Duration(seconds: 15) : const Duration(seconds: 3),
       ),
     );
-
-    if (source == null || !mounted) return;
-
-    final XFile? image = await _imagePicker.pickImage(
-      source: source,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 85,
-    );
-    
-    if (image != null && mounted) {
-      // Show loading snackbar
-      _showSnackBar('Uploading photo...', isProgress: true);
-      
-      final user = _supabase.auth.currentUser!;
-      final fileName = '${user.id}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      final fileBytes = await image.readAsBytes();
-      
-      try {
-        await _supabase.storage
-            .from('avatars')
-            .uploadBinary(fileName, fileBytes, fileOptions: const FileOptions(upsert: true));
-        
-        final avatarUrl = _supabase.storage
-            .from('avatars')
-            .getPublicUrl(fileName);
-        
-        await _supabase
-            .from('profiles')
-            .update({
-              'avatar_url': avatarUrl,
-              'updated_at': DateTime.now().toIso8601String(),
-            })
-            .eq('id', user.id);
-        
-        if (mounted) {
-          _hideCurrentSnackBar();
-          await _loadUserData();
-          _showSnackBar('Profile photo updated successfully!', isSuccess: true);
-        }
-      } catch (uploadError) {
-        if (mounted) {
-          _hideCurrentSnackBar();
-          _showSnackBar('Failed to upload photo. Please try again.', isError: true);
-        }
-      }
-    }
-  } catch (e) {
-    developer.log('Error updating photo: $e', name: 'ProfileScreen');
-    if (mounted) {
-      _hideCurrentSnackBar();
-      _showSnackBar('Failed to update photo. Please try again.', isError: true);
-    }
   }
-}
 
-// Helper methods to safely show/hide snackbars
-void _showSnackBar(String message, {bool isProgress = false, bool isSuccess = false, bool isError = false}) {
-  if (!mounted) return;
-  
-  Color backgroundColor = Colors.grey;
-  if (isSuccess) backgroundColor = Colors.green;
-  if (isError) backgroundColor = Colors.red;
-  
-  ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(
-      content: isProgress
-          ? Row(
-              children: [
-                const CircularProgressIndicator(color: Colors.white),
-                const SizedBox(width: 12),
-                Text(message),
-              ],
-            )
-          : Text(message),
-      backgroundColor: backgroundColor,
-      duration: isProgress ? const Duration(seconds: 30) : const Duration(seconds: 3),
-    ),
-  );
-}
+  void _hideCurrentSnackBar() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+  }
 
-void _hideCurrentSnackBar() {
-  if (!mounted) return;
-  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-}
-  // Profile Header with white background
   Widget _buildProfileHeader() {
     final String? avatarUrl = _userProfile?['avatar_url'];
     
@@ -220,7 +213,6 @@ void _hideCurrentSnackBar() {
           Stack(
             alignment: Alignment.bottomRight,
             children: [
-              // Larger profile picture (120px)
               Container(
                 width: 120,
                 height: 120,
@@ -246,7 +238,6 @@ void _hideCurrentSnackBar() {
                       : null,
                 ),
               ),
-              // Camera button
               Container(
                 width: 40,
                 height: 40,
@@ -296,7 +287,6 @@ void _hideCurrentSnackBar() {
     );
   }
 
-  // Personal Info Card
   Widget _buildPersonalInfoCard() {
     final bool hasAdditionalInfo = _userProfile?['date_of_birth'] != null ||
         _userProfile?['nationality'] != null ||
@@ -399,8 +389,10 @@ void _hideCurrentSnackBar() {
     );
   }
 
-  // Services Section
-  Widget _buildServicesSection() {
+  // NEW: Track Status section instead of My Services
+  Widget _buildTrackStatusSection() {
+    if (_applications.isEmpty && _isLoading) return const SizedBox.shrink();
+    
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -413,10 +405,10 @@ void _hideCurrentSnackBar() {
             children: [
               Row(
                 children: [
-                  const Icon(Icons.widgets_outlined, size: 24, color: Color(0xFF1E88E5)),
+                  const Icon(Icons.track_changes_outlined, size: 24, color: Color(0xFF1E88E5)),
                   const SizedBox(width: 12),
                   Text(
-                    'My Services',
+                    'Track Application Status',
                     style: GoogleFonts.inter(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -427,15 +419,20 @@ void _hideCurrentSnackBar() {
               ),
               const SizedBox(height: 16),
               
-              if (_userServices.isEmpty)
+              if (_applications.isEmpty)
                 _buildEmptyState(
-                  Icons.widgets_outlined,
-                  'No Active Services',
-                  'Explore our services to get started with your immigration journey',
+                  Icons.assignment_outlined,
+                  'Track Application Status',
+                  'Check your application status using your Application ID and Email',
                   actionButton: ElevatedButton(
                     onPressed: () {
-                      Navigator.popUntil(context, (route) => route.isFirst);
-                    },
+                      Navigator.push(
+                       context,
+                       MaterialPageRoute(
+                          builder: (context) => const TrackStatusScreen(),
+                       ),
+                      );
+                   },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1E88E5),
                       foregroundColor: Colors.white,
@@ -445,7 +442,7 @@ void _hideCurrentSnackBar() {
                       ),
                     ),
                     child: Text(
-                      'Explore Services',
+                      'Track Your Application',
                       style: GoogleFonts.inter(
                         fontWeight: FontWeight.w600,
                       ),
@@ -454,126 +451,8 @@ void _hideCurrentSnackBar() {
                 )
               else
                 Column(
-                  children: _userServices.map((service) => _buildServiceItem(service)).toList(),
+                  children: _applications.map((application) => _buildApplicationItem(application)).toList(),
                 ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildServiceItem(Map<String, dynamic> service) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E88E5).withAlpha(40),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.work_outline, color: Color(0xFF1E88E5), size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  service['service_type'] ?? 'Immigration Service',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Active • Started ${_formatDate(service['created_at'])}',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.green.withAlpha(40),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'Active',
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.green,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Applications Section
-  Widget _buildApplicationsSection() {
-    if (_applications.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.assignment_outlined, size: 24, color: Color(0xFF1E88E5)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Recent Applications',
-                      style: GoogleFonts.inter(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E88E5),
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1E88E5).withAlpha(40),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${_applications.length}',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF1E88E5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              ..._applications.take(3).map((application) => _buildApplicationItem(application)),
             ],
           ),
         ),
@@ -582,70 +461,128 @@ void _hideCurrentSnackBar() {
   }
 
   Widget _buildApplicationItem(Map<String, dynamic> application) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: Colors.blue.withAlpha(40),
-              shape: BoxShape.circle,
+    return GestureDetector(
+      onTap: () {
+        // You can add navigation to detailed application view here
+        _showApplicationDetails(application);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.blue.withAlpha(40),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.airplane_ticket, color: Colors.blue, size: 20),
             ),
-            child: const Icon(Icons.airplane_ticket, color: Colors.blue, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${application['destination_country'] ?? 'Unknown'} - ${application['visa_type'] ?? 'Visa'}',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black87,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${application['destination_country'] ?? 'Unknown'} - ${application['visa_type'] ?? 'Visa'}',
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black87,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Applied: ${_formatDate(application['created_at'])}',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
+                  const SizedBox(height: 4),
+                  Text(
+                    'Applied: ${_formatDate(application['created_at'])}',
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: _getStatusColor(application['status'] ?? 'pending').withAlpha(40),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              (application['status'] ?? 'pending').toString().toUpperCase(),
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: _getStatusColor(application['status'] ?? 'pending'),
+                ],
               ),
             ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _getStatusColor(application['status'] ?? 'pending').withAlpha(40),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                (application['status'] ?? 'pending').toString().toUpperCase(),
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: _getStatusColor(application['status'] ?? 'pending'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showApplicationDetails(Map<String, dynamic> application) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Application Details'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailRow('Destination', application['destination_country'] ?? 'N/A'),
+              _buildDetailRow('Visa Type', application['visa_type'] ?? 'N/A'),
+              _buildDetailRow('Status', application['status'] ?? 'pending'),
+              _buildDetailRow('Applied Date', _formatDate(application['created_at'])),
+              if (application['reference_number'] != null)
+                _buildDetailRow('Reference', application['reference_number']),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
           ),
         ],
       ),
     );
   }
 
-  // Empty state widget
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState(IconData icon, String title, String subtitle, {Widget? actionButton}) {
     return Column(
       children: [
@@ -676,7 +613,6 @@ void _hideCurrentSnackBar() {
     );
   }
 
-  // Menu Section
   Widget _buildMenuSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -757,7 +693,6 @@ void _hideCurrentSnackBar() {
     );
   }
 
-  // Helper methods
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'approved':
@@ -786,7 +721,7 @@ void _hideCurrentSnackBar() {
       context: context,
       builder: (context) => EditPersonalInfoDialog(
         profile: _userProfile,
-        onSave: _loadUserData,
+        onSave: () => _loadUserData(forceRefresh: true),
       ),
     );
   }
@@ -888,48 +823,16 @@ void _hideCurrentSnackBar() {
   }
 
   void _showPaymentMethods() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Payment Methods'),
-        content: const Text(
-          'Manage your payment options and view payment history. '
-          'Currently we support UPI payments and Pay Later options.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => const PaymentScreen(),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: Colors.white,
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(color: Color(0xFF1E88E5)),
-              const SizedBox(height: 16),
-              Text(
-                'Loading your profile...',
-                style: GoogleFonts.inter(
-                  color: Colors.grey.shade600,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
@@ -943,26 +846,75 @@ void _hideCurrentSnackBar() {
         backgroundColor: const Color(0xFF1E88E5),
         foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (_isRefreshing)
+            const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: Center(
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: () => _loadUserData(forceRefresh: true),
+              tooltip: 'Refresh',
+            ),
+        ],
       ),
-      body: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildProfileHeader(),
-            _buildPersonalInfoCard(),
-            _buildServicesSection(),
-            _buildApplicationsSection(),
-            _buildMenuSection(),
-            const SizedBox(height: 24),
-          ],
-        ),
+      body: _isLoading
+          ? const _ProfileLoadingWidget()
+          : RefreshIndicator(
+              onRefresh: () => _loadUserData(forceRefresh: true),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildProfileHeader(),
+                    _buildPersonalInfoCard(),
+                    _buildTrackStatusSection(), // Replaced Services with Track Status
+                    _buildMenuSection(),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+}
+
+class _ProfileLoadingWidget extends StatelessWidget {
+  const _ProfileLoadingWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(color: Color(0xFF1E88E5)),
+          const SizedBox(height: 16),
+          Text(
+            'Loading your profile...',
+            style: GoogleFonts.inter(
+              color: Colors.grey.shade600,
+              fontSize: 16,
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// EditPersonalInfoDialog remains the same
 class EditPersonalInfoDialog extends StatefulWidget {
   final Map<String, dynamic>? profile;
   final VoidCallback onSave;
@@ -1020,32 +972,6 @@ class _EditPersonalInfoDialogState extends State<EditPersonalInfoDialog> {
     }
   }
 
-  bool _isValidDate(String date) {
-    if (date.isEmpty) return true;
-    try {
-      DateTime.parse(date);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  String? _validatePhone(String? value) {
-    if (value == null || value.isEmpty) return null;
-    
-    final phoneRegex = RegExp(r'^[0-9+\-\s()]{10,15}$');
-    if (!phoneRegex.hasMatch(value)) {
-      return 'Please enter a valid phone number';
-    }
-    
-    final digitsOnly = value.replaceAll(RegExp(r'[^\d]'), '');
-    if (digitsOnly.length < 10) {
-      return 'Phone number must be at least 10 digits';
-    }
-    
-    return null;
-  }
-
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -1064,8 +990,7 @@ class _EditPersonalInfoDialogState extends State<EditPersonalInfoDialog> {
           'updated_at': DateTime.now().toIso8601String(),
         };
 
-        if (_dateOfBirthController.text.trim().isNotEmpty && 
-            _isValidDate(_dateOfBirthController.text.trim())) {
+        if (_dateOfBirthController.text.trim().isNotEmpty) {
           updateData['date_of_birth'] = _dateOfBirthController.text.trim();
         }
 
@@ -1156,16 +1081,13 @@ class _EditPersonalInfoDialogState extends State<EditPersonalInfoDialog> {
                       decoration: const InputDecoration(
                         labelText: 'Phone Number',
                         border: OutlineInputBorder(),
-                        hintText: '+1 (555) 123-4567',
                       ),
-                      keyboardType: TextInputType.phone,
-                      validator: _validatePhone,
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
                       controller: _dateOfBirthController,
                       decoration: InputDecoration(
-                        labelText: 'Date of Birth (YYYY-MM-DD)',
+                        labelText: 'Date of Birth',
                         border: const OutlineInputBorder(),
                         suffixIcon: IconButton(
                           icon: const Icon(Icons.calendar_today),
@@ -1174,12 +1096,6 @@ class _EditPersonalInfoDialogState extends State<EditPersonalInfoDialog> {
                       ),
                       readOnly: true,
                       onTap: _selectDate,
-                      validator: (value) {
-                        if (value != null && value.isNotEmpty && !_isValidDate(value)) {
-                          return 'Please enter a valid date (YYYY-MM-DD)';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 12),
                     TextFormField(
