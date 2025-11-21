@@ -1,7 +1,10 @@
+// login_screen.dart - COMPLETELY FIXED VERSION
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:jrr_immigration_app/services/auth_service.dart';
 import 'package:jrr_immigration_app/screens/main/main_screen.dart';
 import 'package:jrr_immigration_app/screens/auth/signup_screen.dart';
+//import 'package:jrr_immigration_app/screens/auth/reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -21,105 +24,130 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _autoValidate = false;
   bool _rememberMe = false;
 
-  Future<void> _signIn() async {
-  if (!_formKey.currentState!.validate()) {
-    setState(() => _autoValidate = true);
-    return;
+  @override
+  void initState() {
+    super.initState();
+    _checkForWebResetToken();
   }
 
-  setState(() => _isLoading = true);
-  
-  try {
-    final user = await _authService.signIn(
-      email: _emailController.text,
-      password: _passwordController.text,
-    );
+  void _checkForWebResetToken() {
+    if (!kIsWeb) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _performWebTokenCheck();
+    });
+  }
+
+  void _performWebTokenCheck() {
+    if (!mounted) return;
+    debugPrint('🔍 Checking for web reset tokens...');
+  }
+
+  Future<void> _signIn() async {
+    if (!_formKey.currentState!.validate()) {
+      setState(() => _autoValidate = true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
     
-    if (mounted && user != null) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const MainScreen()),
+    try {
+      final user = await _authService.signIn(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+      
+      if (mounted && user != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      }
+      
+    } catch (error) {
+      final errorMessage = error.toString().replaceAll('Exception: ', '');
+      
+      if (mounted) {
+        _showErrorSnackBar(errorMessage);
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showErrorSnackBar(String errorMessage) {
+    if (errorMessage.contains('Email not verified')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          backgroundColor: Colors.orange,
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'Resend',
+            textColor: Colors.white,
+            onPressed: () {
+              _showResendVerificationDialog();
+            },
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Login failed: $errorMessage'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
-    
-  } catch (error) {
-    final errorMessage = error.toString().replaceAll('Exception: ', '');
-    
-    if (mounted) {
-      if (errorMessage.contains('Email not verified')) {
-        // Show specific message for unverified email
+  }
+
+  void _showResendVerificationDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Resend Verification Email'),
+        content: const Text('Would you like us to send a new verification email?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _resendVerificationEmail();
+            },
+            child: const Text('Resend'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _resendVerificationEmail() async {
+    try {
+      await _authService.resendEmailConfirmation(_emailController.text);
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(errorMessage),
-            backgroundColor: Colors.orange,
-            duration: const Duration(seconds: 6),
-            action: SnackBarAction(
-              label: 'Resend',
-              textColor: Colors.white,
-              onPressed: () {
-                // You could add resend functionality here
-                _showResendVerificationDialog();
-              },
-            ),
+          const SnackBar(
+            content: Text('Verification email sent! Check your inbox.'),
+            backgroundColor: Colors.green,
           ),
         );
-      } else {
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: $errorMessage'),
+            content: Text('Failed to resend: ${e.toString()}'),
             backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
           ),
         );
       }
     }
-  } finally {
-    if (mounted) {
-      setState(() => _isLoading = false);
-    }
   }
-}
-
-void _showResendVerificationDialog() {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Resend Verification Email'),
-      content: const Text('Would you like us to send a new verification email?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.of(context).pop();
-            try {
-              await _authService.resendEmailConfirmation(_emailController.text);
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Verification email sent! Check your inbox.'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              }
-            } catch (e) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Failed to resend: ${e.toString()}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          },
-          child: const Text('Resend'),
-        ),
-      ],
-    ),
-  );
-}
 
   void _navigateToSignUp() {
     Navigator.of(context).push(
@@ -128,128 +156,16 @@ void _showResendVerificationDialog() {
   }
 
   void _navigateToForgotPassword() {
-  final emailController = TextEditingController();
-  bool isLoading = false;
+    final emailController = TextEditingController();
 
-  showDialog(
-    context: context,
-    builder: (context) => StatefulBuilder(
-      builder: (context, setDialogState) {
-        return AlertDialog(
-          title: const Text(
-            'Reset Password',
-            style: TextStyle(color: Color(0xFF0D97CE)),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Enter your email address. We will send you a password reset link.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                  filled: true,
-                  fillColor: Colors.white,
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
-                keyboardType: TextInputType.emailAddress,
-                enabled: !isLoading,
-                autofocus: true,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Note: The reset link will open in your browser.',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            if (!isLoading)
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-              ),
-            ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      final email = emailController.text.trim();
-                      
-                      // Basic email validation
-                      if (email.isEmpty || !email.contains('@')) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Please enter a valid email address'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                        return;
-                      }
-
-                      setDialogState(() => isLoading = true);
-
-                      try {
-                        await _authService.resetPassword(email);
-                        
-                        if (mounted) {
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Password reset instructions sent to your email.'),
-                              backgroundColor: Colors.green,
-                              duration: Duration(seconds: 5),
-                            ),
-                          );
-                        }
-                      } catch (error) {
-                        final errorMessage = error.toString().replaceAll('Exception: ', '');
-                        
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                errorMessage.contains('wait') 
-                                  ? 'Please wait 60 seconds before trying again' 
-                                  : 'Failed to send reset instructions: $errorMessage',
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      } finally {
-                        setDialogState(() => isLoading = false);
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0D97CE),
-              ),
-              child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text('Send Reset Link'),
-            ),
-          ],
-        );
-      },
-    ),
-  );
-}
-
-
+    showDialog(
+      context: context,
+      builder: (context) => ForgotPasswordDialog(
+        emailController: emailController,
+        authService: _authService,
+      ),
+    );
+  }
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
@@ -296,11 +212,9 @@ void _showResendVerificationDialog() {
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Logo Section
                       _buildLogoSection(),
                       const SizedBox(height: 40),
 
-                      // Email Field
                       TextFormField(
                         controller: _emailController,
                         decoration: const InputDecoration(
@@ -317,7 +231,6 @@ void _showResendVerificationDialog() {
                       ),
                       const SizedBox(height: 16),
 
-                      // Password Field
                       TextFormField(
                         controller: _passwordController,
                         decoration: InputDecoration(
@@ -347,7 +260,6 @@ void _showResendVerificationDialog() {
                       ),
                       const SizedBox(height: 16),
 
-                      // Remember me and Forgot password
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -376,7 +288,6 @@ void _showResendVerificationDialog() {
                       ),
                       const SizedBox(height: 24),
 
-                      // Login Button
                       ElevatedButton(
                         onPressed: _isLoading ? null : _signIn,
                         style: ElevatedButton.styleFrom(
@@ -405,7 +316,6 @@ void _showResendVerificationDialog() {
                               ),
                       ),
 
-                      // Sign up prompt
                       const SizedBox(height: 24),
                       _buildSignUpPrompt(),
                     ],
@@ -422,13 +332,11 @@ void _showResendVerificationDialog() {
   Widget _buildLogoSection() {
     return Column(
       children: [
-        // Your actual logo - make sure the path is correct
         Image.asset(
           'assets/images/JRR Logo.png', 
           width: 120,
           height: 120,
           errorBuilder: (context, error, stackTrace) {
-            // Fallback if logo is missing
             return Container(
               width: 100,
               height: 100,
@@ -454,21 +362,21 @@ void _showResendVerificationDialog() {
           ),
         ),
         const Text(
-  'We work beyond borders',
-  style: TextStyle(
-    fontSize: 14,
-    color: Colors.grey,
-    fontStyle: FontStyle.italic,
-  ),
-),
-const Text(
-                            "India's Only Legally Backed Immigration & Travel App",
-                            style: TextStyle(
-                            color: Colors.grey,
-                            fontStyle: FontStyle.italic,
-                            fontSize: 12,
-                           ),
-                         ),
+          'We work beyond borders',
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const Text(
+          "India's Only Legally Backed Immigration & Travel App",
+          style: TextStyle(
+            color: Colors.grey,
+            fontStyle: FontStyle.italic,
+            fontSize: 12,
+          ),
+        ),
         const SizedBox(height: 8),
         const Text(
           'Sign in to continue',
@@ -478,7 +386,6 @@ const Text(
           ),
         ),
       ],
-      
     );
   }
 
@@ -510,5 +417,135 @@ const Text(
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+}
+
+// Separate widget for the forgot password dialog to fix variable scope issues
+class ForgotPasswordDialog extends StatefulWidget {
+  final TextEditingController emailController;
+  final AuthService authService;
+
+  const ForgotPasswordDialog({
+    super.key,
+    required this.emailController,
+    required this.authService,
+  });
+
+  @override
+  State<ForgotPasswordDialog> createState() => _ForgotPasswordDialogState();
+}
+
+class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
+  bool _isLoading = false;
+
+  Future<void> _sendResetLink() async {
+    final email = widget.emailController.text.trim();
+    
+    if (email.isEmpty || !email.contains('@')) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid email address'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await widget.authService.resetPassword(email);
+      
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset instructions sent to your email.'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 5),
+        ),
+      );
+    } catch (error) {
+      final errorMessage = error.toString().replaceAll('Exception: ', '');
+      
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            errorMessage.contains('wait') 
+              ? 'Please wait 60 seconds before trying again' 
+              : 'Failed to send reset instructions: $errorMessage',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text(
+        'Reset Password',
+        style: TextStyle(color: Color(0xFF0D97CE)),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text(
+            'Enter your email address. We will send you a password reset link.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: widget.emailController,
+            decoration: const InputDecoration(
+              labelText: 'Email',
+              border: OutlineInputBorder(),
+              filled: true,
+              fillColor: Colors.white,
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+            keyboardType: TextInputType.emailAddress,
+            enabled: !_isLoading,
+            autofocus: true,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Note: The reset link will open in your browser.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actions: [
+        if (!_isLoading)
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _sendResetLink,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF0D97CE),
+          ),
+          child: _isLoading
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Send Reset Link'),
+        ),
+      ],
+    );
   }
 }

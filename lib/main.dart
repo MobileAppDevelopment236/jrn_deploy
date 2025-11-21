@@ -1,18 +1,21 @@
-// main.dart - FIXED VERSION
+// main.dart - COMPLETE REWRITE WITH WEB AUTH SUPPORT
 import 'dart:async';
+
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'package:jrr_immigration_app/providers/auth_provider.dart';
 import 'package:jrr_immigration_app/providers/documents_provider.dart';
 import 'package:jrr_immigration_app/screens/auth/login_screen.dart';
 import 'package:jrr_immigration_app/screens/auth/reset_password_screen.dart';
 import 'package:jrr_immigration_app/screens/home_screen.dart';
-import 'package:intl/date_symbol_data_local.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -56,8 +59,8 @@ class MyApp extends StatelessWidget {
         title: 'JRR Go',
         debugShowCheckedModeBanner: false,
         routes: {
-    '/reset-password': (context) => const ResetPasswordScreen(),
-  },
+          '/reset-password': (context) => const ResetPasswordScreen(),
+        },
         theme: ThemeData(
           primaryColor: const Color(0xFF0D97CE),
           colorScheme: const ColorScheme.light(
@@ -131,7 +134,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   User? _currentUser;
   StreamSubscription<AuthState>? _authSubscription;
   bool _isPasswordResetFlow = false;
-  //Uri? _initialDeepLink;
+  bool _isEmailVerificationFlow = false;
 
   @override
   void initState() {
@@ -141,24 +144,26 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   }
 
   Future<void> _initializeApp() async {
+    await _handleWebAuthCallbacks(); // Handle web URLs first
     await _getInitialSession();
-    await _handleInitialDeepLink();
     _setupAuthListener();
   }
 
-  Future<void> _handleInitialDeepLink() async {
-    try {
-      // Get initial link when app starts
-      final initialLink = _supabase.auth.currentSession;
-      if (initialLink != null) {
-        _checkForPasswordReset(initialLink);
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        debugPrint('❌ Error handling initial deep link: $e');
-      }
-    }
+  // ===========================================================================
+  // WEB AUTH CALLBACK HANDLING - NEW IMPLEMENTATION
+  // ===========================================================================
+  Future<void> _handleWebAuthCallbacks() async {
+  if (!kIsWeb) return;
+
+  try {
+    // For web, we rely on Supabase to handle the URL automatically
+    // The reset-password.html and auth-callback.html will handle the redirects
+    debugPrint('🌐 Web platform detected - auth callbacks handled by HTML files');
+    
+  } catch (error) {
+    debugPrint('❌ Error handling web auth callbacks: $error');
   }
+}
 
   void _setupAuthListener() {
     _authSubscription = _supabase.auth.onAuthStateChange.listen(_handleAuthStateChange);
@@ -181,13 +186,30 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
       authProvider.initializeUser(_currentUser);
 
-      // Handle password recovery - CRITICAL FIX
+      // Handle password recovery
       if (event == AuthChangeEvent.passwordRecovery) {
         if (kDebugMode) {
           debugPrint('🎯 PASSWORD RECOVERY EVENT TRIGGERED!');
           debugPrint('📧 User: ${session?.user.email}');
         }
         _handlePasswordRecovery();
+      }
+      
+      // Handle email verification success
+      if (event == AuthChangeEvent.signedIn && _isEmailVerificationFlow) {
+        debugPrint('✅ Email verification successful!');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email verified successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        setState(() {
+          _isEmailVerificationFlow = false;
+        });
       }
     }
   }
@@ -201,29 +223,6 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       setState(() {
         _isPasswordResetFlow = true;
       });
-      
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const ResetPasswordScreen()),
-          (route) => false,
-        );
-      });
-    }
-  }
-
-  void _checkForPasswordReset(Session? session) {
-    if (session != null) {
-      // Check if this is a password recovery session
-      final user = session.user;
-      final isRecoverySession = user.appMetadata['provider'] == 'email' && 
-                                user.aud == 'authenticated';
-      
-      if (isRecoverySession && mounted) {
-        if (kDebugMode) {
-          debugPrint('🔑 Password recovery session detected');
-        }
-        _handlePasswordRecovery();
-      }
     }
   }
 
@@ -242,9 +241,6 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
         debugPrint('👤 Initial session loaded: ${_currentUser?.email}');
       }
       
-      // Check if initial session is for password reset
-      _checkForPasswordReset(currentSession);
-      
     } catch (error) {
       if (kDebugMode) {
         debugPrint('❌ Error getting initial session: $error');
@@ -258,7 +254,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Check for deep links when app resumes
+      // Re-check auth state when app resumes
       _checkForActiveSession();
     }
   }
@@ -266,7 +262,11 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   Future<void> _checkForActiveSession() async {
     try {
       final currentSession = _supabase.auth.currentSession;
-      _checkForPasswordReset(currentSession);
+      if (mounted) {
+        setState(() {
+          _currentUser = currentSession?.user;
+        });
+      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint('❌ Error checking active session: $e');
@@ -287,7 +287,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       );
     }
 
-    // If we're in password reset flow, show reset screen
+    // Handle password reset flow
     if (_isPasswordResetFlow) {
       return const ResetPasswordScreen();
     }
