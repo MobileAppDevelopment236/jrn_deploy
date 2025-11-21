@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Verification - JRR Immigration</title>
+    <script>
+        function handleAuthCallback() {
+            // Get token from URL parameters
+            const urlParams = new URLSearchParams(window.location.hash.substring(1));
+            const access_token = urlParams.get('access_token');
+            const refresh_token = urlParams.get('refresh_token');
+            const type = urlParams.get('type');
+
+            if (access_token && type === 'signup') {
+                // Store tokens and redirect to main app
+                localStorage.setItem('supabase.auth.token', access_token);
+                localStorage.setItem('supabase.auth.refresh_token', refresh_token);
+                window.location.href = window.location.origin + '/jrn_deploy/';
+            } else {
+                // Redirect to main app
+                window.location.href = window.location.origin + '/jrn_deploy/';
+            }
+        }
+
+        window.onload = handleAuthCallback;
+    </script>
+</head>
+<body>
+    <p>Processing email verification... Redirecting to app.</p>
+</body>
+</html>
