@@ -1,4 +1,4 @@
-// reset_password_screen.dart - ENHANCED VERSION
+// reset_password_screen.dart - CLEAN VERSION
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:jrr_immigration_app/services/auth_service.dart';
@@ -30,48 +30,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     _checkResetSession();
   }
 
-  // Check if we have a valid reset session
   Future<void> _checkResetSession() async {
     try {
       final session = _supabase.auth.currentSession;
+      
       if (session == null) {
-        debugPrint('❌ No active session for password reset');
-        _showErrorAndRedirect('Invalid reset link. Please request a new password reset.');
+        debugPrint('ℹ️ No active session - this is NORMAL for password reset flow');
       } else {
-        debugPrint('✅ Valid reset session found for user: ${session.user.email}');
+        debugPrint('✅ Active session found for user: ${session.user.email}');
       }
     } catch (error) {
       debugPrint('❌ Error checking reset session: $error');
-      _showErrorAndRedirect('Session expired. Please request a new password reset.');
-    }
-  }
-
-  void _showErrorAndRedirect(String message) {
-    if (mounted) {
-      setState(() {
-        _errorMessage = message;
-        _isLoading = false;
-      });
-      
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(message),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-        
-        // Redirect to login after showing error
-        Future.delayed(const Duration(seconds: 3), () {
-          if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-              (route) => false,
-            );
-          }
-        });
-      });
     }
   }
 
@@ -111,7 +80,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           ),
         );
 
-        // Auto-redirect to login after success
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) {
             Navigator.of(context).pushAndRemoveUntil(
@@ -178,11 +146,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 400),
-                child: _errorMessage != null 
-                    ? _buildErrorUI()
-                    : _resetSuccess 
-                        ? _buildSuccessUI()
-                        : _buildResetForm(),
+                child: _resetSuccess 
+                    ? _buildSuccessUI()
+                    : _buildResetForm(),
               ),
             ),
           ),
@@ -197,7 +163,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Logo
           Container(
             width: 80,
             height: 80,
@@ -232,7 +197,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           ),
           const SizedBox(height: 30),
 
-          // New Password Field
           TextFormField(
             controller: _newPasswordController,
             decoration: InputDecoration(
@@ -261,7 +225,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Confirm Password Field
           TextFormField(
             controller: _confirmPasswordController,
             decoration: InputDecoration(
@@ -292,11 +255,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               return _validatePassword(value);
             },
             enabled: !_isLoading,
-            onFieldSubmitted: (_) => _resetPassword(),
           ),
           const SizedBox(height: 24),
 
-          // Reset Button
           ElevatedButton(
             onPressed: _isLoading ? null : _resetPassword,
             style: ElevatedButton.styleFrom(
@@ -325,7 +286,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   ),
           ),
 
-          // Back to Login
           TextButton(
             onPressed: _isLoading 
                 ? null 
@@ -364,42 +324,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           style: TextStyle(
             fontSize: 16,
             color: Colors.grey,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 30),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-              (route) => false,
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF0D97CE),
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
-          ),
-          child: const Text('Back to Login'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildErrorUI() {
-    return Column(
-      children: [
-        Icon(
-          Icons.error_outline,
-          size: 80,
-          color: Colors.red.shade600,
-        ),
-        const SizedBox(height: 20),
-        Text(
-          _errorMessage ?? 'An error occurred',
-          style: const TextStyle(
-            fontSize: 16,
-            color: Colors.red,
           ),
           textAlign: TextAlign.center,
         ),
