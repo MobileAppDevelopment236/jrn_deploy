@@ -1,4 +1,4 @@
-// main.dart - ENHANCED VERSION WITH COMPLETE PASSWORD RESET DETECTION
+// main.dart - CORRECTED VERSION
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -19,14 +19,11 @@ import 'package:jrr_immigration_app/screens/home_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ===========================================================================
-  // FIX FOR DATE PICKER ISSUE
-  // ===========================================================================
+  // Initialize date formatting
   await initializeDateFormatting('en_IN');
-  
-  // SIMPLE FIX FOR LOCALE ERROR
   Intl.defaultLocale = 'en_IN';
 
+  // Load environment variables
   await dotenv.load(fileName: ".env");
 
   String supabaseUrl = dotenv.env['SUPABASE_URL'] ?? '';
@@ -36,6 +33,7 @@ void main() async {
     throw Exception('Supabase URL or Anon Key is missing. Please check your .env file');
   }
 
+  // Initialize Supabase
   await Supabase.initialize(
     url: supabaseUrl,
     anonKey: supabaseAnonKey,
@@ -133,153 +131,137 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   User? _currentUser;
   StreamSubscription<AuthState>? _authSubscription;
   bool _isPasswordResetFlow = false;
-  bool _isEmailVerificationFlow = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _initializeApp();
+    _initializeAuth();
   }
 
-  Future<void> _initializeApp() async {
-    await _handleWebAuthCallbacks();
-    await _getInitialSession();
-    _setupAuthListener();
-  }
-
-  // ===========================================================================
-  // ENHANCED WEB AUTH CALLBACK HANDLING
-  // ===========================================================================
-  Future<void> _handleWebAuthCallbacks() async {
-    if (!kIsWeb) return;
-
+  Future<void> _initializeAuth() async {
     try {
-      final currentUrl = Uri.base.toString();
-      final fragment = Uri.base.fragment;
-      final queryParams = Uri.base.queryParameters;
-      
-      debugPrint('🔍 COMPREHENSIVE URL ANALYSIS:');
-      debugPrint('  - Full URL: $currentUrl');
-      debugPrint('  - Fragment: $fragment');
-      debugPrint('  - Query Parameters: $queryParams');
-      debugPrint('  - Path: ${Uri.base.path}');
-
-      // COMPREHENSIVE DETECTION - ALL POSSIBLE RESET PATTERNS
-      final bool isResetFlow = 
-          // Fragment patterns
-          currentUrl.contains('#reset-password') ||
-          fragment.contains('/reset-password') ||
-          fragment.startsWith('reset-password') ||
-          // Query parameter patterns
-          queryParams.containsKey('token') ||
-          queryParams['type'] == 'recovery' ||
-          currentUrl.contains('type=recovery') ||
-          currentUrl.contains('password_reset') ||
-          currentUrl.contains('reset_password') ||
-          // Path patterns
-          Uri.base.path.contains('reset-password') ||
-          // Common Supabase patterns
-          currentUrl.contains('access_token') && currentUrl.contains('type=recovery');
-
-      if (isResetFlow) {
-        debugPrint('🎯 PASSWORD RESET FLOW DETECTED!');
-        debugPrint('🚀 Triggering reset password screen...');
-        
-        if (mounted) {
-          setState(() {
-            _isPasswordResetFlow = true;
-          });
-        }
-      } else {
-        debugPrint('❌ No reset password patterns detected in URL');
-        debugPrint('💡 If reset is not working, check the actual email link URL');
-      }
-      
-    } catch (error) {
-      debugPrint('❌ Error in web auth callbacks: $error');
-    }
-  }
-
-  void _setupAuthListener() {
-    _authSubscription = _supabase.auth.onAuthStateChange.listen(_handleAuthStateChange);
-  }
-
-  void _handleAuthStateChange(AuthState data) {
-    final AuthChangeEvent event = data.event;
-    final Session? session = data.session;
-    
-    debugPrint('🔐 AUTH STATE CHANGE: $event');
-    debugPrint('🔑 Session: ${session != null ? "EXISTS" : "NULL"}');
-    debugPrint('👤 User Email: ${session?.user?.email ?? "No user"}');
-
-    if (mounted) {
-      setState(() {
-        _currentUser = session?.user;
-      });
-      
-      final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
-      authProvider.initializeUser(_currentUser);
-
-      // CRITICAL: Handle password recovery for all platforms
-      if (event == AuthChangeEvent.passwordRecovery) {
-        debugPrint('🎯 PASSWORD RECOVERY EVENT DETECTED!');
-        debugPrint('🚀 Showing reset password screen...');
-        if (mounted) {
-          setState(() {
-            _isPasswordResetFlow = true;
-          });
-        }
-      }
-      
-      // Handle email verification success
-      if (event == AuthChangeEvent.signedIn && _isEmailVerificationFlow) {
-        debugPrint('✅ Email verification successful!');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Email verified successfully!'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
-        setState(() {
-          _isEmailVerificationFlow = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _getInitialSession() async {
-    try {
-      final currentSession = _supabase.auth.currentSession;
+      // Get initial session
+      final initialSession = _supabase.auth.currentSession;
       
       if (mounted) {
         setState(() {
-          _currentUser = currentSession?.user;
+          _currentUser = initialSession?.user;
+        });
+      }
+
+      // Handle web callbacks for password reset
+      if (kIsWeb) {
+        await _handleWebPasswordReset();
+      }
+
+      // Setup auth state listener
+      _setupAuthListener();
+
+      if (mounted) {
+        setState(() {
           _isLoading = false;
         });
       }
-      
-      debugPrint('👤 Initial session loaded: ${_currentUser?.email ?? "No user"}');
+
+      debugPrint('✅ Auth initialization complete');
+      debugPrint('👤 User: ${_currentUser?.email ?? "Not logged in"}');
       
     } catch (error) {
-      debugPrint('❌ Error getting initial session: $error');
+      debugPrint('❌ Auth initialization error: $error');
       if (mounted) {
         setState(() => _isLoading = false);
       }
     }
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _checkForActiveSession();
+  Future<void> _handleWebPasswordReset() async {
+    try {
+      final currentUrl = Uri.base.toString();
+      final fragment = Uri.base.fragment;
+      final queryParams = Uri.base.queryParameters;
+
+      debugPrint('🌐 Web URL Analysis:');
+      debugPrint('   URL: $currentUrl');
+      debugPrint('   Fragment: $fragment');
+      debugPrint('   Query: $queryParams');
+
+      // DETECT PASSWORD RESET - ALL POSSIBLE SCENARIOS
+      final bool isResetDetected = 
+          // URL contains reset indicators
+          currentUrl.contains('reset-password') ||
+          currentUrl.contains('password_reset') ||
+          currentUrl.contains('reset_password') ||
+          // Query parameters indicate reset
+          queryParams['type'] == 'recovery' ||
+          queryParams.containsKey('token') ||
+          // Fragment indicates reset
+          fragment.contains('reset-password') ||
+          fragment.contains('recovery') ||
+          // Supabase auth patterns
+          (currentUrl.contains('access_token') && currentUrl.contains('type=recovery')) ||
+          // Mobile deep links in web context
+          currentUrl.contains('jrr-immigration://reset-password');
+
+      if (isResetDetected) {
+        debugPrint('🎯 Password reset detected via URL');
+        if (mounted) {
+          setState(() {
+            _isPasswordResetFlow = true;
+          });
+        }
+      }
+    } catch (error) {
+      debugPrint('❌ Web reset handler error: $error');
     }
   }
 
-  Future<void> _checkForActiveSession() async {
+  void _setupAuthListener() {
+  _authSubscription = _supabase.auth.onAuthStateChange.listen((AuthState data) {
+    final AuthChangeEvent event = data.event;
+    final Session? session = data.session;
+
+    debugPrint('🔐 Auth Event: $event');
+    debugPrint('   User: ${session?.user.email ?? "No user"}');
+
+    if (mounted) {
+      setState(() {
+        _currentUser = session?.user;
+      });
+
+      // FIXED: Remove null-aware operator from authProvider
+      final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
+      authProvider.initializeUser(_currentUser);
+
+      // Handle password recovery event
+      if (event == AuthChangeEvent.passwordRecovery) {
+        debugPrint('🔄 Password recovery event detected');
+        setState(() {
+          _isPasswordResetFlow = true;
+        });
+      }
+
+      // Handle successful sign-in
+      if (event == AuthChangeEvent.signedIn) {
+        debugPrint('✅ User signed in successfully');
+      }
+
+      // Handle sign out
+      if (event == AuthChangeEvent.signedOut) {
+        debugPrint('🚪 User signed out');
+      }
+    }
+  });
+}
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Session check on app resume
+    if (state == AppLifecycleState.resumed) {
+      _checkCurrentSession();
+    }
+  }
+
+  Future<void> _checkCurrentSession() async {
     try {
       final currentSession = _supabase.auth.currentSession;
       if (mounted) {
@@ -287,20 +269,15 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
           _currentUser = currentSession?.user;
         });
       }
+      debugPrint('📱 App resumed - Session: ${_currentUser != null ? "Active" : "Inactive"}');
     } catch (e) {
-      debugPrint('❌ Error checking active session: $e');
+      debugPrint('❌ Session check error: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // TEMPORARY: Enhanced URL checking on every build for web
-    if (kIsWeb && !_isPasswordResetFlow && !_isLoading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _handleWebAuthCallbacks();
-      });
-    }
-
+    // Show loading screen
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFFC5C9CE),
@@ -314,17 +291,22 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
 
     // Handle password reset flow
     if (_isPasswordResetFlow) {
-      debugPrint('✅ RENDERING RESET PASSWORD SCREEN');
+      debugPrint('🔄 Rendering Reset Password Screen');
       return const ResetPasswordScreen();
     }
 
+    // Determine if user is logged in
     final isLoggedIn = _currentUser != null;
 
+    // Initialize auth provider - FIXED NULL-AWARE OPERATOR
     if (mounted) {
       final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
       authProvider.initializeUser(_currentUser);
     }
 
+    debugPrint('🏠 Rendering: ${isLoggedIn ? 'Home Screen' : 'Login Screen'}');
+
+    // Return appropriate screen
     return Scaffold(
       body: SafeArea(
         child: isLoggedIn ? const HomeScreen() : const LoginScreen(),
@@ -334,6 +316,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    // Cleanup
     WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
     super.dispose();
