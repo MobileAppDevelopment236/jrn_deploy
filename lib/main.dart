@@ -1,4 +1,4 @@
-// main.dart - CLEAN VERSION
+// main.dart - ENHANCED VERSION WITH COMPLETE PASSWORD RESET DETECTION
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -148,86 +148,109 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
     _setupAuthListener();
   }
 
+  // ===========================================================================
+  // ENHANCED WEB AUTH CALLBACK HANDLING
+  // ===========================================================================
   Future<void> _handleWebAuthCallbacks() async {
-  if (!kIsWeb) return;
+    if (!kIsWeb) return;
 
-  try {
-    final currentUrl = Uri.base.toString();
-    final fragment = Uri.base.fragment;
-    debugPrint('🌐 CURRENT URL ANALYSIS:');
-    debugPrint('  - Full URL: $currentUrl');
-    debugPrint('  - Fragment: $fragment');
-    debugPrint('  - Contains #reset-password: ${currentUrl.contains('#reset-password')}');
-    debugPrint('  - Contains /reset-password: ${fragment.contains('/reset-password')}');
-
-    // FIXED DETECTION - Handle both #reset-password and #/reset-password
-    if (currentUrl.contains('#reset-password') || 
-        fragment.contains('/reset-password') ||
-        fragment.startsWith('reset-password')) {
-      debugPrint('🎯 RESET PASSWORD FLOW DETECTED!');
+    try {
+      final currentUrl = Uri.base.toString();
+      final fragment = Uri.base.fragment;
+      final queryParams = Uri.base.queryParameters;
       
-      if (mounted) {
-        setState(() {
-          _isPasswordResetFlow = true;
-        });
+      debugPrint('🔍 COMPREHENSIVE URL ANALYSIS:');
+      debugPrint('  - Full URL: $currentUrl');
+      debugPrint('  - Fragment: $fragment');
+      debugPrint('  - Query Parameters: $queryParams');
+      debugPrint('  - Path: ${Uri.base.path}');
+
+      // COMPREHENSIVE DETECTION - ALL POSSIBLE RESET PATTERNS
+      final bool isResetFlow = 
+          // Fragment patterns
+          currentUrl.contains('#reset-password') ||
+          fragment.contains('/reset-password') ||
+          fragment.startsWith('reset-password') ||
+          // Query parameter patterns
+          queryParams.containsKey('token') ||
+          queryParams['type'] == 'recovery' ||
+          currentUrl.contains('type=recovery') ||
+          currentUrl.contains('password_reset') ||
+          currentUrl.contains('reset_password') ||
+          // Path patterns
+          Uri.base.path.contains('reset-password') ||
+          // Common Supabase patterns
+          currentUrl.contains('access_token') && currentUrl.contains('type=recovery');
+
+      if (isResetFlow) {
+        debugPrint('🎯 PASSWORD RESET FLOW DETECTED!');
+        debugPrint('🚀 Triggering reset password screen...');
+        
+        if (mounted) {
+          setState(() {
+            _isPasswordResetFlow = true;
+          });
+        }
+      } else {
+        debugPrint('❌ No reset password patterns detected in URL');
+        debugPrint('💡 If reset is not working, check the actual email link URL');
       }
-    } else {
-      debugPrint('❌ Reset password NOT detected in URL');
+      
+    } catch (error) {
+      debugPrint('❌ Error in web auth callbacks: $error');
     }
-    
-  } catch (error) {
-    debugPrint('❌ Error handling web auth callbacks: $error');
   }
-}
+
   void _setupAuthListener() {
     _authSubscription = _supabase.auth.onAuthStateChange.listen(_handleAuthStateChange);
   }
 
   void _handleAuthStateChange(AuthState data) {
-  final AuthChangeEvent event = data.event;
-  final Session? session = data.session;
-  
-  debugPrint('🔐 AUTH STATE CHANGE: $event');
-  debugPrint('🔑 Session: ${session != null ? "EXISTS" : "NULL"}');
-  debugPrint('👤 User: ${session?.user?.email}');
-  debugPrint('📧 User email: ${session?.user?.email}');
-
-  if (mounted) {
-    setState(() {
-      _currentUser = session?.user;
-    });
+    final AuthChangeEvent event = data.event;
+    final Session? session = data.session;
     
-    final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
-    authProvider.initializeUser(_currentUser);
+    debugPrint('🔐 AUTH STATE CHANGE: $event');
+    debugPrint('🔑 Session: ${session != null ? "EXISTS" : "NULL"}');
+    debugPrint('👤 User Email: ${session?.user?.email ?? "No user"}');
 
-    // CRITICAL: Handle password recovery for both web and mobile
-    if (event == AuthChangeEvent.passwordRecovery) {
-      debugPrint('🎯 PASSWORD RECOVERY EVENT DETECTED - SHOWING RESET SCREEN');
-      if (mounted) {
+    if (mounted) {
+      setState(() {
+        _currentUser = session?.user;
+      });
+      
+      final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
+      authProvider.initializeUser(_currentUser);
+
+      // CRITICAL: Handle password recovery for all platforms
+      if (event == AuthChangeEvent.passwordRecovery) {
+        debugPrint('🎯 PASSWORD RECOVERY EVENT DETECTED!');
+        debugPrint('🚀 Showing reset password screen...');
+        if (mounted) {
+          setState(() {
+            _isPasswordResetFlow = true;
+          });
+        }
+      }
+      
+      // Handle email verification success
+      if (event == AuthChangeEvent.signedIn && _isEmailVerificationFlow) {
+        debugPrint('✅ Email verification successful!');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email verified successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
         setState(() {
-          _isPasswordResetFlow = true;
+          _isEmailVerificationFlow = false;
         });
       }
     }
-    
-    // Handle signed in event for email verification
-    if (event == AuthChangeEvent.signedIn && _isEmailVerificationFlow) {
-      debugPrint('✅ Email verification successful!');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Email verified successfully!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
-      }
-      setState(() {
-        _isEmailVerificationFlow = false;
-      });
-    }
   }
-}
+
   Future<void> _getInitialSession() async {
     try {
       final currentSession = _supabase.auth.currentSession;
@@ -239,14 +262,10 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
         });
       }
       
-      if (kDebugMode) {
-        debugPrint('👤 Initial session loaded: ${_currentUser?.email}');
-      }
+      debugPrint('👤 Initial session loaded: ${_currentUser?.email ?? "No user"}');
       
     } catch (error) {
-      if (kDebugMode) {
-        debugPrint('❌ Error getting initial session: $error');
-      }
+      debugPrint('❌ Error getting initial session: $error');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -269,14 +288,19 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
         });
       }
     } catch (e) {
-      if (kDebugMode) {
-        debugPrint('❌ Error checking active session: $e');
-      }
+      debugPrint('❌ Error checking active session: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // TEMPORARY: Enhanced URL checking on every build for web
+    if (kIsWeb && !_isPasswordResetFlow && !_isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _handleWebAuthCallbacks();
+      });
+    }
+
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFFC5C9CE),
@@ -288,8 +312,9 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       );
     }
 
-    // Handle password reset flow - THIS IS CRITICAL
+    // Handle password reset flow
     if (_isPasswordResetFlow) {
+      debugPrint('✅ RENDERING RESET PASSWORD SCREEN');
       return const ResetPasswordScreen();
     }
 
