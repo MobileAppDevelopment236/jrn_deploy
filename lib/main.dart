@@ -176,45 +176,52 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   }
 
   Future<void> _handleWebPasswordReset() async {
-    try {
-      final currentUrl = Uri.base.toString();
-      final fragment = Uri.base.fragment;
-      final queryParams = Uri.base.queryParameters;
+  try {
+    final currentUrl = Uri.base.toString();
+    final fragment = Uri.base.fragment;
+    final queryParams = Uri.base.queryParameters;
 
-      debugPrint('🌐 Web URL Analysis:');
-      debugPrint('   URL: $currentUrl');
-      debugPrint('   Fragment: $fragment');
-      debugPrint('   Query: $queryParams');
+    debugPrint('🌐 WEB URL ANALYSIS - ENHANCED:');
+    debugPrint('   FULL URL: $currentUrl');
+    debugPrint('   FRAGMENT: $fragment');
+    debugPrint('   QUERY PARAMS: $queryParams');
 
-      // DETECT PASSWORD RESET - ALL POSSIBLE SCENARIOS
-      final bool isResetDetected = 
-          // URL contains reset indicators
-          currentUrl.contains('reset-password') ||
-          currentUrl.contains('password_reset') ||
-          currentUrl.contains('reset_password') ||
-          // Query parameters indicate reset
-          queryParams['type'] == 'recovery' ||
-          queryParams.containsKey('token') ||
-          // Fragment indicates reset
-          fragment.contains('reset-password') ||
-          fragment.contains('recovery') ||
-          // Supabase auth patterns
-          (currentUrl.contains('access_token') && currentUrl.contains('type=recovery')) ||
-          // Mobile deep links in web context
-          currentUrl.contains('jrr-immigration://reset-password');
+    // COMPREHENSIVE DETECTION
+    bool isResetDetected = false;
 
-      if (isResetDetected) {
-        debugPrint('🎯 Password reset detected via URL');
-        if (mounted) {
-          setState(() {
-            _isPasswordResetFlow = true;
-          });
-        }
-      }
-    } catch (error) {
-      debugPrint('❌ Web reset handler error: $error');
+    // 1. Check if we're on the reset-password path
+    if (Uri.base.path.contains('reset-password')) {
+      debugPrint('🎯 DETECTED: reset-password in path');
+      isResetDetected = true;
     }
+
+    // 2. Check for hash/fragment patterns
+    if (fragment.contains('reset-password') || fragment.contains('recovery')) {
+      debugPrint('🎯 DETECTED: reset pattern in fragment');
+      isResetDetected = true;
+    }
+
+    // 3. Check for exact hash match
+    if (fragment == 'reset-password') {
+      debugPrint('🎯 DETECTED: exact reset-password fragment');
+      isResetDetected = true;
+    }
+
+    if (isResetDetected) {
+      debugPrint('🚀 PASSWORD RESET FLOW ACTIVATED!');
+      if (mounted) {
+        setState(() {
+          _isPasswordResetFlow = true;
+        });
+      }
+    } else {
+      debugPrint('❌ NO RESET PATTERNS FOUND');
+    }
+    
+  } catch (error) {
+    debugPrint('❌ Web reset handler error: $error');
   }
+}
 
   void _setupAuthListener() {
   _authSubscription = _supabase.auth.onAuthStateChange.listen((AuthState data) {
