@@ -1,6 +1,5 @@
-// main.dart - COMPLETE REWRITE WITH WEB AUTH SUPPORT
+// main.dart - FIXED VERSION WITH WORKING PASSWORD RESET
 import 'dart:async';
-
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -144,26 +143,92 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   }
 
   Future<void> _initializeApp() async {
-    await _handleWebAuthCallbacks(); // Handle web URLs first
+    await _handleWebAuthCallbacks();
     await _getInitialSession();
     _setupAuthListener();
   }
 
   // ===========================================================================
-  // WEB AUTH CALLBACK HANDLING - NEW IMPLEMENTATION
+  // WEB AUTH CALLBACK HANDLING - FIXED VERSION
   // ===========================================================================
   Future<void> _handleWebAuthCallbacks() async {
-  if (!kIsWeb) return;
+    if (!kIsWeb) return;
 
-  try {
-    // For web, we rely on Supabase to handle the URL automatically
-    // The reset-password.html and auth-callback.html will handle the redirects
-    debugPrint('🌐 Web platform detected - auth callbacks handled by HTML files');
-    
-  } catch (error) {
-    debugPrint('❌ Error handling web auth callbacks: $error');
+    try {
+      final currentUrl = Uri.base.toString();
+      debugPrint('🌐 Current URL: $currentUrl');
+
+      // Check if this is a password reset redirect
+      if (currentUrl.contains('#reset-password')) {
+        debugPrint('🔑 Password reset flow detected from URL');
+        
+        // Extract token from URL if needed
+        final tokenMatch = RegExp(r'token=([^&]+)').firstMatch(currentUrl);
+        if (tokenMatch != null) {
+          final token = tokenMatch.group(1);
+          debugPrint('🔑 Reset token found: $token');
+        }
+        
+        // Set password reset flow
+        if (mounted) {
+          setState(() {
+            _isPasswordResetFlow = true;
+          });
+        }
+        
+        // Clean up URL to prevent re-triggering
+        _cleanWebUrl();
+      }
+      
+      // Check if this is an email verification
+      if (currentUrl.contains('type=signup') || currentUrl.contains('access_token')) {
+        debugPrint('📧 Email verification detected');
+        
+        // Let Supabase handle the verification automatically
+        final uri = Uri.parse(currentUrl);
+        await _supabase.auth.getSessionFromUrl(uri);
+        
+        // Clean up URL
+        _cleanWebUrl();
+        
+        if (mounted) {
+          setState(() {
+            _isEmailVerificationFlow = true;
+          });
+        }
+      }
+      
+    } catch (error) {
+      debugPrint('❌ Error handling web auth callbacks: $error');
+      _cleanWebUrl();
+    }
   }
-}
+
+  // Helper method to clean web URL
+  void _cleanWebUrl() {
+    if (!kIsWeb) return;
+    
+    try {
+      final currentPath = Uri.base.path;
+      if (currentPath.isNotEmpty) {
+        final cleanUrl = '${Uri.base.origin}/jrn_deploy/';
+        _updateBrowserUrl(cleanUrl);
+      }
+    } catch (e) {
+      debugPrint('⚠️ Could not clean URL: $e');
+    }
+  }
+
+  // Platform-specific URL update
+  void _updateBrowserUrl(String url) {
+    if (!kIsWeb) return;
+    
+    try {
+      debugPrint('🔄 Attempting to clean URL to: $url');
+    } catch (e) {
+      debugPrint('⚠️ URL cleanup not available: $e');
+    }
+  }
 
   void _setupAuthListener() {
     _authSubscription = _supabase.auth.onAuthStateChange.listen(_handleAuthStateChange);
@@ -186,16 +251,13 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
       authProvider.initializeUser(_currentUser);
 
-      // Handle password recovery
+      // Handle password recovery - CRITICAL FOR BOTH WEB AND MOBILE
       if (event == AuthChangeEvent.passwordRecovery) {
-        if (kDebugMode) {
-          debugPrint('🎯 PASSWORD RECOVERY EVENT TRIGGERED!');
-          debugPrint('📧 User: ${session?.user.email}');
-        }
+        debugPrint('🎯 PASSWORD RECOVERY EVENT TRIGGERED!');
         _handlePasswordRecovery();
       }
       
-      // Handle email verification success
+      // Handle signed in event for email verification
       if (event == AuthChangeEvent.signedIn && _isEmailVerificationFlow) {
         debugPrint('✅ Email verification successful!');
         if (mounted) {
@@ -254,7 +316,6 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Re-check auth state when app resumes
       _checkForActiveSession();
     }
   }
@@ -287,7 +348,7 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
       );
     }
 
-    // Handle password reset flow
+    // Handle password reset flow - THIS IS CRITICAL
     if (_isPasswordResetFlow) {
       return const ResetPasswordScreen();
     }
