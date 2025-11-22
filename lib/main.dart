@@ -149,35 +149,36 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   }
 
   Future<void> _handleWebAuthCallbacks() async {
-    if (!kIsWeb) return;
+  if (!kIsWeb) return;
 
-    try {
-      final currentUrl = Uri.base.toString();
-      debugPrint('🌐 CURRENT URL ANALYSIS:');
-      debugPrint('  - Full URL: $currentUrl');
-      debugPrint('  - Fragment: ${Uri.base.fragment}');
-      debugPrint('  - Contains #reset-password: ${currentUrl.contains('#reset-password')}');
-      debugPrint('  - Query params: ${Uri.base.queryParameters}');
+  try {
+    final currentUrl = Uri.base.toString();
+    final fragment = Uri.base.fragment;
+    debugPrint('🌐 CURRENT URL ANALYSIS:');
+    debugPrint('  - Full URL: $currentUrl');
+    debugPrint('  - Fragment: $fragment');
+    debugPrint('  - Contains #reset-password: ${currentUrl.contains('#reset-password')}');
+    debugPrint('  - Contains /reset-password: ${fragment.contains('/reset-password')}');
 
-      // Check if this is a password reset redirect
-      if (currentUrl.contains('#reset-password')) {
-        debugPrint('🎯 RESET PASSWORD FLOW DETECTED!');
-        
-        // Set password reset flow
-        if (mounted) {
-          setState(() {
-            _isPasswordResetFlow = true;
-          });
-        }
-      } else {
-        debugPrint('❌ Reset password NOT detected in URL');
-      }
+    // FIXED DETECTION - Handle both #reset-password and #/reset-password
+    if (currentUrl.contains('#reset-password') || 
+        fragment.contains('/reset-password') ||
+        fragment.startsWith('reset-password')) {
+      debugPrint('🎯 RESET PASSWORD FLOW DETECTED!');
       
-    } catch (error) {
-      debugPrint('❌ Error handling web auth callbacks: $error');
+      if (mounted) {
+        setState(() {
+          _isPasswordResetFlow = true;
+        });
+      }
+    } else {
+      debugPrint('❌ Reset password NOT detected in URL');
     }
+    
+  } catch (error) {
+    debugPrint('❌ Error handling web auth callbacks: $error');
   }
-
+}
   void _setupAuthListener() {
     _authSubscription = _supabase.auth.onAuthStateChange.listen(_handleAuthStateChange);
   }
