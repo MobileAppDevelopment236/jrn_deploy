@@ -27,7 +27,7 @@ const RESOURCES = {"assets/AssetManifest.bin": "08e780e5a57fc918611c567595bf414c
 "canvaskit/skwasm_heavy.wasm": "8034ad26ba2485dab2fd49bdd786837b",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
 "flutter.js": "888483df48293866f9f41d3d9274a779",
-"flutter_bootstrap.js": "80d92982eabaa336ba1db052c40b00cd",
+"flutter_bootstrap.js": "346f1f1da9e5f6e03eab89a8d01369aa",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
 "icons/Icon-maskable-192.png": "c457ef57daa1d16f64b27b786ec2ea3c",
