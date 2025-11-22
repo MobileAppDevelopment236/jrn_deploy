@@ -184,51 +184,50 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   }
 
   void _handleAuthStateChange(AuthState data) {
-    final AuthChangeEvent event = data.event;
-    final Session? session = data.session;
-    
-    if (kDebugMode) {
-      debugPrint('🔐 Auth state changed: $event');
-      debugPrint('🔑 Session: ${session != null ? "EXISTS" : "NULL"}');
-    }
-    
-    if (mounted) {
-      setState(() {
-        _currentUser = session?.user;
-      });
-      
-      final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
-      authProvider.initializeUser(_currentUser);
+  final AuthChangeEvent event = data.event;
+  final Session? session = data.session;
+  
+  debugPrint('🔐 AUTH STATE CHANGE: $event');
+  debugPrint('🔑 Session: ${session != null ? "EXISTS" : "NULL"}');
+  debugPrint('👤 User: ${session?.user?.email}');
+  debugPrint('📧 User email: ${session?.user?.email}');
 
-      // CRITICAL: Handle password recovery for both web and mobile
-      if (event == AuthChangeEvent.passwordRecovery) {
-        debugPrint('🎯 PASSWORD RECOVERY EVENT DETECTED - SHOWING RESET SCREEN');
-        if (mounted) {
-          setState(() {
-            _isPasswordResetFlow = true;
-          });
-        }
-      }
-      
-      // Handle signed in event for email verification
-      if (event == AuthChangeEvent.signedIn && _isEmailVerificationFlow) {
-        debugPrint('✅ Email verification successful!');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Email verified successfully!'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 3),
-            ),
-          );
-        }
+  if (mounted) {
+    setState(() {
+      _currentUser = session?.user;
+    });
+    
+    final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
+    authProvider.initializeUser(_currentUser);
+
+    // CRITICAL: Handle password recovery for both web and mobile
+    if (event == AuthChangeEvent.passwordRecovery) {
+      debugPrint('🎯 PASSWORD RECOVERY EVENT DETECTED - SHOWING RESET SCREEN');
+      if (mounted) {
         setState(() {
-          _isEmailVerificationFlow = false;
+          _isPasswordResetFlow = true;
         });
       }
     }
+    
+    // Handle signed in event for email verification
+    if (event == AuthChangeEvent.signedIn && _isEmailVerificationFlow) {
+      debugPrint('✅ Email verification successful!');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Email verified successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+      setState(() {
+        _isEmailVerificationFlow = false;
+      });
+    }
   }
-
+}
   Future<void> _getInitialSession() async {
     try {
       final currentSession = _supabase.auth.currentSession;
