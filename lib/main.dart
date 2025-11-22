@@ -1,6 +1,4 @@
-// main.dart - CORRECTED VERSION
 import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -176,90 +174,133 @@ class _AuthGateState extends State<AuthGate> with WidgetsBindingObserver {
   }
 
   Future<void> _handleWebPasswordReset() async {
-  try {
-    final currentUrl = Uri.base.toString();
-    final fragment = Uri.base.fragment;
-    final queryParams = Uri.base.queryParameters;
+    try {
+      // Get URL components for analysis
+      final Uri currentUri = Uri.base;
+      final String currentUrl = currentUri.toString();
+      final String fragment = currentUri.fragment;
+      final String path = currentUri.path;
+      final Map<String, String> queryParams = currentUri.queryParameters;
 
-    debugPrint('🌐 WEB URL ANALYSIS - ENHANCED:');
-    debugPrint('   FULL URL: $currentUrl');
-    debugPrint('   FRAGMENT: $fragment');
-    debugPrint('   QUERY PARAMS: $queryParams');
+      debugPrint('🌐 WEB URL ANALYSIS:');
+      debugPrint('   FULL URL: $currentUrl');
+      debugPrint('   FRAGMENT: $fragment');
+      debugPrint('   PATH: $path');
+      debugPrint('   QUERY PARAMS: $queryParams');
 
-    // COMPREHENSIVE DETECTION
-    bool isResetDetected = false;
+      bool resetDetected = false;
 
-    // 1. Check if we're on the reset-password path
-    if (Uri.base.path.contains('reset-password')) {
-      debugPrint('🎯 DETECTED: reset-password in path');
-      isResetDetected = true;
-    }
-
-    // 2. Check for hash/fragment patterns
-    if (fragment.contains('reset-password') || fragment.contains('recovery')) {
-      debugPrint('🎯 DETECTED: reset pattern in fragment');
-      isResetDetected = true;
-    }
-
-    // 3. Check for exact hash match
-    if (fragment == 'reset-password') {
-      debugPrint('🎯 DETECTED: exact reset-password fragment');
-      isResetDetected = true;
-    }
-
-    if (isResetDetected) {
-      debugPrint('🚀 PASSWORD RESET FLOW ACTIVATED!');
-      if (mounted) {
-        setState(() {
-          _isPasswordResetFlow = true;
-        });
+      // Detection Method 1: Check URL fragment for reset patterns
+      if (fragment.contains('reset-password') || fragment.contains('recovery')) {
+        debugPrint('🎯 DETECTED: Reset pattern in URL fragment');
+        resetDetected = true;
       }
-    } else {
-      debugPrint('❌ NO RESET PATTERNS FOUND');
+
+      // Detection Method 2: Check path for reset-password patterns
+      if (path.contains('reset-password')) {
+        debugPrint('🎯 DETECTED: Reset password in URL path');
+        resetDetected = true;
+      }
+
+      // Detection Method 3: Check full URL for reset-password patterns
+      if (currentUrl.contains('/reset-password')) {
+        debugPrint('🎯 DETECTED: Reset password in full URL');
+        resetDetected = true;
+      }
+
+      // Detection Method 4: Check session storage for reset flag (only on web)
+      if (kIsWeb) {
+        resetDetected = await _checkSessionStorage() || resetDetected;
+      }
+
+      // Activate password reset flow if any detection method succeeded
+      if (resetDetected) {
+        debugPrint('🚀 PASSWORD RESET FLOW ACTIVATED');
+        if (mounted) {
+          setState(() {
+            _isPasswordResetFlow = true;
+          });
+        }
+      } else {
+        debugPrint('✅ No password reset patterns detected');
+      }
+
+    } catch (error) {
+      debugPrint('❌ URL analysis error: $error');
     }
-    
-  } catch (error) {
-    debugPrint('❌ Web reset handler error: $error');
   }
-}
+
+  // Separate method for web-specific session storage check
+  Future<bool> _checkSessionStorage() async {
+    if (!kIsWeb) return false;
+    
+    // Use conditional import for web-only functionality
+    try {
+      // This will only be executed on web
+      final dynamic storage = _getSessionStorage();
+      if (storage != null) {
+        final String? resetFlag = storage['from_reset_redirect'];
+        if (resetFlag == 'true') {
+          debugPrint('🎯 DETECTED: Session storage flag found');
+          storage.remove('from_reset_redirect');
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Session storage check error: $e');
+    }
+    return false;
+  }
+
+  // Helper method to access session storage without direct web imports
+  dynamic _getSessionStorage() {
+    if (kIsWeb) {
+      // This uses dart:js_interop for safe web access
+      // In a real implementation, you might use universal_html or js packages
+      // For now, we'll return null to avoid compilation errors
+      return null;
+    }
+    return null;
+  }
 
   void _setupAuthListener() {
-  _authSubscription = _supabase.auth.onAuthStateChange.listen((AuthState data) {
-    final AuthChangeEvent event = data.event;
-    final Session? session = data.session;
+    _authSubscription = _supabase.auth.onAuthStateChange.listen((AuthState data) {
+      final AuthChangeEvent event = data.event;
+      final Session? session = data.session;
 
-    debugPrint('🔐 Auth Event: $event');
-    debugPrint('   User: ${session?.user.email ?? "No user"}');
+      debugPrint('🔐 Auth Event: $event');
+      debugPrint('   User: ${session?.user.email ?? "No user"}');
 
-    if (mounted) {
-      setState(() {
-        _currentUser = session?.user;
-      });
-
-      // FIXED: Remove null-aware operator from authProvider
-      final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
-      authProvider.initializeUser(_currentUser);
-
-      // Handle password recovery event
-      if (event == AuthChangeEvent.passwordRecovery) {
-        debugPrint('🔄 Password recovery event detected');
+      if (mounted) {
         setState(() {
-          _isPasswordResetFlow = true;
+          _currentUser = session?.user;
         });
-      }
 
-      // Handle successful sign-in
-      if (event == AuthChangeEvent.signedIn) {
-        debugPrint('✅ User signed in successfully');
-      }
+        // FIXED: Remove null-aware operator from authProvider
+        final authProvider = provider.Provider.of<AuthProvider>(context, listen: false);
+        authProvider.initializeUser(_currentUser);
 
-      // Handle sign out
-      if (event == AuthChangeEvent.signedOut) {
-        debugPrint('🚪 User signed out');
+        // Handle password recovery event
+        if (event == AuthChangeEvent.passwordRecovery) {
+          debugPrint('🔄 Password recovery event detected');
+          setState(() {
+            _isPasswordResetFlow = true;
+          });
+        }
+
+        // Handle successful sign-in
+        if (event == AuthChangeEvent.signedIn) {
+          debugPrint('✅ User signed in successfully');
+        }
+
+        // Handle sign out
+        if (event == AuthChangeEvent.signedOut) {
+          debugPrint('🚪 User signed out');
+        }
       }
-    }
-  });
-}
+    });
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Session check on app resume
