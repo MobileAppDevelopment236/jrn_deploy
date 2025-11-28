@@ -1,0 +1,27 @@
+// In web/auth-callback.html - UPDATE the password recovery section
+// Handle PASSWORD RECOVERY
+if (token && type === 'recovery') {
+    console.log('🔐 Password recovery token detected');
+    
+    // Store recovery tokens in multiple locations for Flutter access
+    if (typeof localStorage !== 'undefined') {
+        localStorage.setItem('password_reset_required', 'true');
+        localStorage.setItem('reset_timestamp', new Date().toISOString());
+        localStorage.setItem('supabase_recovery_token', token);
+        localStorage.setItem('supabase_recovery_type', 'recovery');
+    }
+    
+    statusEl.className = 'status success';
+    statusEl.innerHTML = `
+        <h3>Reset Password</h3>
+        <p>Redirecting you to reset your password...</p>
+    `;
+
+    // Redirect to main app - Flutter will detect the reset requirement
+    setTimeout(() => {
+        const appUrl = getAppBaseUrl();
+        console.log('🔄 Redirecting to main app for password reset:', appUrl);
+        window.location.href = appUrl;
+    }, 2000);
+    return;
+}
