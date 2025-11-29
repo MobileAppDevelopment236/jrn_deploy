@@ -19,14 +19,67 @@
   <title>JRR Immigration</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- Add this script for Supabase auth handling -->
+  <!-- Enhanced script for Supabase auth handling -->
   <script>
-    // Handle Supabase auth redirects
+    // Handle Supabase auth redirects - ENHANCED VERSION
     async function handleAuthRedirect() {
       const hash = window.location.hash;
+      const search = window.location.search;
+      
+      console.log('🔗 Initial URL Analysis:');
+      console.log('   - Hash:', hash);
+      console.log('   - Search:', search);
+      
+      // Check if this is a password reset callback
+      if (hash.includes('access_token') || hash.includes('type=recovery') || 
+          search.includes('access_token') || search.includes('type=recovery')) {
+        
+        console.log('🔄 Password reset callback detected');
+        
+        // Extract parameters from both hash and query
+        const params = new URLSearchParams();
+        
+        // Add query parameters
+        if (search) {
+          const searchParams = new URLSearchParams(search.substring(1));
+          for (const [key, value] of searchParams.entries()) {
+            params.set(key, value);
+          }
+        }
+        
+        // Add hash parameters (hash takes precedence)
+        if (hash) {
+          const hashPart = hash.includes('?') ? hash.split('?')[1] : hash.substring(1);
+          const hashParams = new URLSearchParams(hashPart);
+          for (const [key, value] of hashParams.entries()) {
+            params.set(key, value);
+          }
+        }
+        
+        const token = params.get('access_token');
+        const type = params.get('type');
+        
+        console.log('🔐 Extracted parameters:', { token: token ? '***' + token.slice(-8) : null, type });
+        
+        if (token && type === 'recovery') {
+          console.log('✅ Valid recovery token found, storing...');
+          
+          // Store in localStorage for Flutter app to read
+          localStorage.setItem('password_reset_required', 'true');
+          localStorage.setItem('supabase_recovery_token', token);
+          localStorage.setItem('supabase_recovery_type', 'recovery');
+          localStorage.setItem('reset_timestamp', new Date().toISOString());
+          
+          console.log('🔐 Tokens stored successfully');
+          
+          // Clean up URL and let Flutter handle the reset
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+      
+      // For other auth callbacks, let Flutter handle them
       if (hash.includes('access_token') || hash.includes('error')) {
-        // This is an auth callback, let Flutter handle it
-        console.log('Auth callback detected');
+        console.log('🔑 General auth callback detected');
       }
     }
     
