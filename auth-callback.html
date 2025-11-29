@@ -1,27 +1,175 @@
-// In web/auth-callback.html - UPDATE the password recovery section
-// Handle PASSWORD RECOVERY
-if (token && type === 'recovery') {
-    console.log('🔐 Password recovery token detected');
-    
-    // Store recovery tokens in multiple locations for Flutter access
-    if (typeof localStorage !== 'undefined') {
-        localStorage.setItem('password_reset_required', 'true');
-        localStorage.setItem('reset_timestamp', new Date().toISOString());
-        localStorage.setItem('supabase_recovery_token', token);
-        localStorage.setItem('supabase_recovery_type', 'recovery');
-    }
-    
-    statusEl.className = 'status success';
-    statusEl.innerHTML = `
-        <h3>Reset Password</h3>
-        <p>Redirecting you to reset your password...</p>
-    `;
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Authentication Callback - JRR Immigration</title>
+    <script>
+        // Enhanced auth callback handler - EMAIL VERIFICATION ONLY
+        function handleAuthCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const access_token = urlParams.get('access_token');
+            const refresh_token = urlParams.get('refresh_token');
+            const token = urlParams.get('token');
+            const type = urlParams.get('type');
+            const error = urlParams.get('error');
+            const error_description = urlParams.get('error_description');
+            
+            console.log('🔐 Auth callback parameters:', { 
+                type, 
+                error,
+                has_access_token: !!access_token,
+                has_token: !!token 
+            });
 
-    // Redirect to main app - Flutter will detect the reset requirement
-    setTimeout(() => {
-        const appUrl = getAppBaseUrl();
-        console.log('🔄 Redirecting to main app for password reset:', appUrl);
-        window.location.href = appUrl;
-    }, 2000);
-    return;
-}
+            // Handle errors
+            if (error) {
+                console.error('❌ Auth error:', error, error_description);
+                // Store error for Flutter to handle
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('auth_error', error);
+                    if (error_description) {
+                        localStorage.setItem('auth_error_description', error_description);
+                    }
+                }
+                
+                // Redirect to main app - Flutter will handle the error
+                setTimeout(() => {
+                    const appUrl = `https://www.jrrgo.com/`;
+                    console.log('🔄 Redirecting to main app with error:', appUrl);
+                    window.location.href = appUrl;
+                }, 1000);
+                return;
+            }
+
+            // Handle EMAIL VERIFICATION (signup)
+            if (type === 'signup' && (access_token || token)) {
+                console.log('✅ Email verification successful');
+                
+                // Store verification success for Flutter
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('email_verification_success', 'true');
+                    localStorage.setItem('verification_timestamp', new Date().toISOString());
+                    
+                    // Store tokens if available
+                    if (access_token) {
+                        localStorage.setItem('supabase_auth_token', access_token);
+                    }
+                    if (refresh_token) {
+                        localStorage.setItem('supabase_refresh_token', refresh_token);
+                    }
+                }
+
+                // Show success message
+                document.getElementById('status').className = 'status success';
+                document.getElementById('status').innerHTML = `
+                    <h3>Email Verified!</h3>
+                    <p>Your email has been verified successfully. Redirecting to app...</p>
+                `;
+
+                // Redirect to main app
+                setTimeout(() => {
+                    const appUrl = `https://www.jrrgo.com/`;
+                    console.log('🔄 Redirecting to main app after verification:', appUrl);
+                    window.location.href = appUrl;
+                }, 2000);
+                return;
+            }
+
+            // Handle other auth types or fallback
+            console.log('ℹ️ General auth callback, redirecting to main app');
+            setTimeout(() => {
+                const appUrl = `https://www.jrrgo.com/`;
+                window.location.href = appUrl;
+            }, 1000);
+        }
+
+        function getAppBaseUrl() {
+            return 'https://www.jrrgo.com/';
+        }
+
+        // Start processing when page loads
+        document.addEventListener('DOMContentLoaded', handleAuthCallback);
+    </script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0D97CE 0%, #1E3A8A 100%);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            color: #333;
+        }
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1rem;
+            background: #0D97CE;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+        }
+        h1 {
+            color: #0D97CE;
+            margin-bottom: 1rem;
+        }
+        .status {
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+        .success {
+            background: #D1FAE5;
+            color: #065F46;
+            border: 1px solid #A7F3D0;
+        }
+        .error {
+            background: #FEE2E2;
+            color: #991B1B;
+            border: 1px solid #FECACA;
+        }
+        .loading {
+            background: #DBEAFE;
+            color: #1E40AF;
+            border: 1px solid #BFDBFE;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0D97CE;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">✉️</div>
+        <h1>Authentication</h1>
+        <div id="status" class="status loading">
+            <div class="spinner"></div>
+            <p>Processing authentication...</p>
+        </div>
+    </div>
+</body>
+</html>
