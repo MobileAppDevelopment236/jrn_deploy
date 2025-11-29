@@ -105544,7 +105544,7 @@ var $async$Gw=A.p(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
 A.C().$1("\ud83d\udd04 Requesting password reset for: "+a)
 s=7
-return A.k(n.a.gcW().zu(B.c.bK(a),"https://www.jrrgo.com/"),$async$Gw)
+return A.k(n.a.gcW().zu(B.c.bK(a),"https://www.jrrgo.com/#/reset-password"),$async$Gw)
 case 7:A.C().$1("\u2705 Password reset email sent to: "+a)
 q=!0
 s=1

@@ -82,9 +82,32 @@
         console.log('🔑 General auth callback detected');
       }
     }
+
+    // ADD THIS NEW FUNCTION HERE:
+    function checkForStoredResetTokens() {
+      console.log('🔍 Checking for stored reset tokens...');
+      
+      const resetRequired = localStorage.getItem('password_reset_required');
+      const recoveryToken = localStorage.getItem('supabase_recovery_token');
+      const resetTimestamp = localStorage.getItem('reset_timestamp');
+      
+      console.log('📦 Stored tokens check:', {
+        resetRequired: resetRequired,
+        hasToken: !!recoveryToken,
+        timestamp: resetTimestamp
+      });
+      
+      if (resetRequired === 'true' && recoveryToken) {
+        console.log('✅ Stored reset tokens found, keeping them for Flutter app');
+        // Tokens are already stored, Flutter will detect them
+      }
+    }
     
-    // Call on page load
-    document.addEventListener('DOMContentLoaded', handleAuthRedirect);
+    // UPDATE THIS EVENT LISTENER TO CALL BOTH FUNCTIONS:
+    document.addEventListener('DOMContentLoaded', function() {
+      handleAuthRedirect(); // your existing function
+      checkForStoredResetTokens(); // new function
+    });
   </script>
 </head>
 <body>
