@@ -18,7 +18,7 @@
   <title>JRR Immigration</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- SIMPLE JavaScript - NO COMPLEX LOGIC -->
+  <!-- ENHANCED JavaScript for better token handling -->
   <script>
     function handleURLParameters() {
       try {
@@ -28,25 +28,46 @@
         const token = hashParams.get('access_token');
         const type = hashParams.get('type');
         
-        // Only handle password recovery tokens
+        console.log('🔐 URL Token Detection:', { 
+          hasToken: !!token, 
+          type: type,
+          fullHash: url.hash
+        });
+        
+        // Handle password recovery tokens
         if (token && type === 'recovery') {
-          console.log('🔐 Password reset token detected');
+          console.log('🎯 Password reset token detected - storing in localStorage');
           localStorage.setItem('password_reset_required', 'true');
           localStorage.setItem('supabase_recovery_token', token);
           localStorage.setItem('supabase_recovery_type', 'recovery');
           localStorage.setItem('reset_timestamp', new Date().toISOString());
+          
+          console.log('✅ Tokens stored, Flutter will handle navigation');
         }
         
-        // Clean URL after processing
-        if (url.hash || url.search) {
-          window.history.replaceState({}, document.title, url.pathname);
+        // Clean URL parameters after processing (this is the key fix)
+        if (url.hash.includes('access_token') || url.hash.includes('type=recovery')) {
+          // Replace URL without the hash parameters
+          window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+          console.log('🧹 URL parameters cleaned');
         }
       } catch (error) {
         console.log('URL processing completed');
       }
     }
 
+    // Run on page load
     document.addEventListener('DOMContentLoaded', handleURLParameters);
+    
+    // Also run when page becomes visible (handles back/forward navigation)
+    document.addEventListener('visibilitychange', function() {
+      if (!document.hidden) {
+        setTimeout(handleURLParameters, 100);
+      }
+    });
+
+    // Additional safety: run after a short delay to catch any late parameters
+    setTimeout(handleURLParameters, 500);
   </script>
 </head>
 <body>
