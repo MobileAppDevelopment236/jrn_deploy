@@ -10,32 +10,25 @@
                 
                 const token = hashParams.get('access_token');
                 const type = hashParams.get('type');
-                const error = hashParams.get('error');
                 
-                console.log('Auth callback processing:', { type, hasToken: !!token, error });
+                console.log('🔐 Auth Callback Processing:', { token: !!token, type: type });
                 
-                // Handle password recovery
                 if (token && type === 'recovery') {
+                    // Store in localStorage (Flutter SharedPreferences will read this)
                     localStorage.setItem('password_reset_required', 'true');
                     localStorage.setItem('supabase_recovery_token', token);
-                    localStorage.setItem('supabase_recovery_type', 'recovery');
+                    localStorage.setItem('supabase_recovery_type', type);
                     localStorage.setItem('reset_timestamp', new Date().toISOString());
+                    console.log('✅ Password reset tokens stored');
                 }
                 
-                // Handle errors
-                if (error) {
-                    localStorage.setItem('auth_error_type', error);
-                    localStorage.setItem('auth_error_timestamp', new Date().toISOString());
-                }
+                // Always redirect to main app
+                window.location.href = 'https://www.jrrgo.com/';
                 
             } catch (error) {
-                console.log('Auth callback completed');
-            }
-            
-            // Always redirect to main app
-            setTimeout(() => {
+                console.error('Auth callback error:', error);
                 window.location.href = 'https://www.jrrgo.com/';
-            }, 500);
+            }
         }
         
         document.addEventListener('DOMContentLoaded', processAuthCallback);
