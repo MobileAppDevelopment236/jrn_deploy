@@ -7282,7 +7282,7 @@ return a.$0()},
 b_M(a){return a==null||A.o6(a)||typeof a=="number"||typeof a=="string"||t.pT.b(a)||t.H3.b(a)||t.Po.b(a)||t.JZ.b(a)||t.w7.b(a)||t.L5.b(a)||t.rd.b(a)||t.s4.b(a)||t.OE.b(a)||t.pI.b(a)||t.V4.b(a)},
 az(a){if(A.b_M(a))return a
 return new A.aPJ(new A.qd(t.Fy)).$1(a)},
-P(a,b){return a[b]},
+Q(a,b){return a[b]},
 An(a,b){return a[b]},
 fV(a,b,c){return a[b].apply(a,c)},
 bdZ(a,b,c){return a[b](c)},
@@ -8861,7 +8861,7 @@ aWn(a,b){var s
 if(a.r)return
 s=$.aRm
 if(s===0)A.bgA(J.c1(a.a),100,a.b)
-else A.Q().$1("Another exception was thrown: "+a.ga8F().j(0))
+else A.P().$1("Another exception was thrown: "+a.ga8F().j(0))
 $.aRm=$.aRm+1},
 aWm(a){var s,r,q,p,o,n,m,l,k,j,i,h=A.a7(["dart:async-patch",0,"dart:async",0,"package:stack_trace",0,"class _AssertionError",0,"class _FakeAsync",0,"class _FrameCallbackEntry",0,"class _Timer",0,"class _RawReceivePortImpl",0],t.N,t.S),g=A.bb8(J.b4H(a,"\n"))
 for(s=0,r=0;q=g.length,r<q;++r){p=g[r]
@@ -8888,11 +8888,11 @@ else k.push(j+" frames from "+B.b.b4(q," ")+")")}return k},
 dW(a){var s=$.lD
 if(s!=null)s.$1(a)},
 bgA(a,b,c){var s,r
-A.Q().$1(a)
+A.P().$1(a)
 s=A.b(B.c.Gx((c==null?A.Gq():A.aWl(c)).j(0)).split("\n"),t.s)
 r=s.length
 s=J.aQu(r!==0?new A.Gc(s,new A.aPh(),t.Ws):s,b)
-A.Q().$1(B.b.b4(A.aWm(s),"\n"))},
+A.P().$1(B.b.b4(A.aWm(s),"\n"))},
 b6I(a,b,c){A.b6J(b,c)
 return new A.Pr()},
 b6J(a,b){if(a==null)return A.b([],t.E)
@@ -29352,7 +29352,7 @@ s=p}while(true)switch(s){case 0:a7=0
 f=t.z,e="\u274c Error uploading "+b1+": ",d="applications/"+a9+"/",c="\u2705 Successfully uploaded: "+b1,b="\ud83d\udd04 Uploading document: "+b1+" (Attempt ",a="\ud83d\udce6 Storage error uploading "+b1+": ",a0="\u23f0 Timeout uploading "+b1+": "
 case 3:if(!(a7<=b2)){s=4
 break}p=6
-A.Q().$1(b+A.h(a7+1)+")")
+A.P().$1(b+A.h(a7+1)+")")
 n=Date.now()
 a1=A.aZ("[^a-zA-Z0-9\\._-]",!0,!1,!1)
 m=A.cf(b1,a1,"_")
@@ -29370,8 +29370,8 @@ return A.k(J.aUR(k,B.v0,new A.arm(b1)),$async$pQ)
 case 9:a1=a1.c
 a1===$&&A.a()
 j=new A.uf(a2,a3,"VISA-DOCUMENTS",a4,a1).GX(l)
-A.Q().$1(c)
-A.Q().$1("\ud83d\udcce Download URL: "+A.h(j))
+A.P().$1(c)
+A.P().$1("\ud83d\udcce Download URL: "+A.h(j))
 a1=j
 q=a1
 s=1
@@ -29385,7 +29385,7 @@ a1=A.W(a8)
 s=a1 instanceof A.pW?10:12
 break
 case 10:i=a1
-A.Q().$1(a0+A.h(i));++a7
+A.P().$1(a0+A.h(i));++a7
 if(a7>b2)throw a8
 s=13
 return A.k(A.fc(new A.b8(1e6*(a7*2)),null,f),$async$pQ)
@@ -29394,14 +29394,14 @@ break
 case 12:s=a1 instanceof A.ue?14:16
 break
 case 14:h=a1
-A.Q().$1(a+A.h(h));++a7
+A.P().$1(a+A.h(h));++a7
 if(a7>b2)throw A.e(A.bI("Storage error for "+b1+": "+h.a))
 s=17
 return A.k(A.fc(new A.b8(1e6*(a7*2)),null,f),$async$pQ)
 case 17:s=15
 break
 case 16:g=a1
-A.Q().$1(e+A.h(g));++a7
+A.P().$1(e+A.h(g));++a7
 if(a7>b2)throw A.e(A.bI("Failed to upload "+b1+" after "+b2+" attempts: "+J.c1(g)))
 s=18
 return A.k(A.fc(new A.b8(1e6*(a7*2)),null,f),$async$pQ)
@@ -29422,7 +29422,7 @@ m=$.Na().at
 m===$&&A.a()
 s=7
 return A.k(m.er("VISA-DOCUMENTS").aEg(0),$async$aro)
-case 7:A.Q().$1("\u2705 Visa documents bucket is accessible")
+case 7:A.P().$1("\u2705 Visa documents bucket is accessible")
 q=!0
 s=1
 break
@@ -29432,7 +29432,7 @@ break
 case 4:p=3
 k=o.pop()
 n=A.W(k)
-A.Q().$1("\u274c Cannot access VISA-DOCUMENTS bucket: "+A.h(n))
+A.P().$1("\u274c Cannot access VISA-DOCUMENTS bucket: "+A.h(n))
 q=!1
 s=1
 break
@@ -29446,31 +29446,31 @@ return A.t($async$aro,r)},
 Gy(){var s=0,r=A.u(t.H),q=1,p=[],o,n,m,l,k,j,i,h,g,f,e
 var $async$Gy=A.p(function(a,b){if(a===1){p.push(b)
 s=q}while(true)switch(s){case 0:q=3
-A.Q().$1("\ud83d\udd0d Testing connection to VISA-DOCUMENTS bucket...")
+A.P().$1("\ud83d\udd0d Testing connection to VISA-DOCUMENTS bucket...")
 s=6
 return A.k(A.aro(),$async$Gy)
 case 6:o=b
-if(o)A.Q().$1("\u2705 Bucket access verified successfully")
-else A.Q().$1("\u274c Cannot access bucket - check permissions")
+if(o)A.P().$1("\u2705 Bucket access verified successfully")
+else A.P().$1("\u274c Cannot access bucket - check permissions")
 n=new Uint8Array(A.lc(A.b([65,66,67,68],t.t)))
 q=8
 s=11
 return A.k(A.pQ("test-connection",n,"test_file.txt",1),$async$Gy)
 case 11:m=b
-A.Q().$1("\u2705 Test upload successful: "+A.h(m))
+A.P().$1("\u2705 Test upload successful: "+A.h(m))
 q=13
 i=$.Na().at
 i===$&&A.a()
 s=16
 return A.k(i.er("VISA-DOCUMENTS").I(0,A.b(["applications/test-connection/test_file.txt"],t.s)),$async$Gy)
-case 16:A.Q().$1("\u2705 Test file cleaned up")
+case 16:A.P().$1("\u2705 Test file cleaned up")
 q=8
 s=15
 break
 case 13:q=12
 g=p.pop()
 l=A.W(g)
-A.Q().$1("\u26a0\ufe0f Test file cleanup failed: "+A.h(l))
+A.P().$1("\u26a0\ufe0f Test file cleanup failed: "+A.h(l))
 s=15
 break
 case 12:s=8
@@ -29481,7 +29481,7 @@ break
 case 8:q=7
 f=p.pop()
 k=A.W(f)
-A.Q().$1("\u274c Test upload failed: "+A.h(k))
+A.P().$1("\u274c Test upload failed: "+A.h(k))
 s=10
 break
 case 7:s=3
@@ -29492,7 +29492,7 @@ break
 case 3:q=2
 e=p.pop()
 j=A.W(e)
-A.Q().$1("\ud83d\udca5 Bucket connection test failed: "+A.h(j))
+A.P().$1("\ud83d\udca5 Bucket connection test failed: "+A.h(j))
 s=5
 break
 case 2:s=1
@@ -29504,25 +29504,25 @@ pP(a,b,c,d,e,f,g){return A.bbj(a,b,c,d,e,f,g)},
 bbj(a,b,c,d,e,f,g){var s=0,r=A.u(t.y),q,p=2,o=[],n,m,l,k,j
 var $async$pP=A.p(function(h,i){if(h===1){o.push(i)
 s=p}while(true)switch(s){case 0:p=4
-A.Q().$1("\ud83d\ude80 STARTING EMAIL PROCESS...")
-A.Q().$1("\ud83d\udce7 TO: "+B.b.b4(g,", "))
-A.Q().$1("\ud83d\udce7 CC: "+B.b.b4(c,", "))
-A.Q().$1("\ud83d\udccb SUBJECT: "+f)
-A.Q().$1("\ud83c\udd94 APPLICATION ID: "+a)
-if(e!=null)A.Q().$1("\ud83e\uddfe RECEIPT URL: "+e)
-A.Q().$1("1\ufe0f\u20e3 Attempting Edge Function...")
+A.P().$1("\ud83d\ude80 STARTING EMAIL PROCESS...")
+A.P().$1("\ud83d\udce7 TO: "+B.b.b4(g,", "))
+A.P().$1("\ud83d\udce7 CC: "+B.b.b4(c,", "))
+A.P().$1("\ud83d\udccb SUBJECT: "+f)
+A.P().$1("\ud83c\udd94 APPLICATION ID: "+a)
+if(e!=null)A.P().$1("\ud83e\uddfe RECEIPT URL: "+e)
+A.P().$1("1\ufe0f\u20e3 Attempting Edge Function...")
 s=7
 return A.k(A.arl(a,b,c,e,f,g),$async$pP)
 case 7:n=i
 if(n){q=!0
 s=1
-break}A.Q().$1("2\ufe0f\u20e3 Edge Function failed, trying device email app...")
+break}A.P().$1("2\ufe0f\u20e3 Edge Function failed, trying device email app...")
 s=8
 return A.k(A.Vg(b,c,f,g),$async$pP)
 case 8:m=i
 if(m){q=!0
 s=1
-break}A.Q().$1("3\ufe0f\u20e3 All methods failed, logging for manual sending...")
+break}A.P().$1("3\ufe0f\u20e3 All methods failed, logging for manual sending...")
 A.aYC(f,b,g,c,a,e)
 q=!1
 s=1
@@ -29533,7 +29533,7 @@ break
 case 4:p=3
 j=o.pop()
 l=A.W(j)
-A.Q().$1("\ud83d\udca5 CRITICAL: All email methods failed: "+A.h(l))
+A.P().$1("\ud83d\udca5 CRITICAL: All email methods failed: "+A.h(l))
 A.aYC(f,b,g,c,a,e)
 q=!1
 s=1
@@ -29549,7 +29549,7 @@ arl(a,b,c,d,e,f){return A.bbh(a,b,c,d,e,f)},
 bbh(a,b,c,d,e,f){var s=0,r=A.u(t.y),q,p=2,o=[],n,m,l,k,j,i
 var $async$arl=A.p(function(g,h){if(g===1){o.push(h)
 s=p}while(true)switch(s){case 0:p=4
-A.Q().$1("\ud83d\udce1 Calling Edge Function: send-visa-email")
+A.P().$1("\ud83d\udce1 Calling Edge Function: send-visa-email")
 n=A.a7(["subject",e,"body",b,"to_emails",f,"cc_emails",c,"application_id",a],t.N,t.z)
 if(d!=null&&d.length!==0)J.eF(n,"receipt_url",d)
 k=$.Na().as
@@ -29557,11 +29557,11 @@ k===$&&A.a()
 s=7
 return A.k(k.mS("send-visa-email",n),$async$arl)
 case 7:m=h
-if(m.b===200){A.Q().$1("\u2705 SUCCESS: Edge Function sent email")
+if(m.b===200){A.P().$1("\u2705 SUCCESS: Edge Function sent email")
 q=!0
 s=1
-break}else{A.Q().$1("\u274c FAILED: Edge Function returned status "+m.b)
-A.Q().$1("Error details: "+A.h(m.a))
+break}else{A.P().$1("\u274c FAILED: Edge Function returned status "+m.b)
+A.P().$1("Error details: "+A.h(m.a))
 q=!1
 s=1
 break}p=2
@@ -29570,7 +29570,7 @@ break
 case 4:p=3
 i=o.pop()
 l=A.W(i)
-A.Q().$1("\u274c ERROR: Edge Function call failed: "+A.h(l))
+A.P().$1("\u274c ERROR: Edge Function call failed: "+A.h(l))
 q=!1
 s=1
 break
@@ -29590,7 +29590,7 @@ a8=0
 f=t.z,e="\u274c Error uploading payment receipt "+b2+": ",d="receipts/"+b0+"/",c="\u2705 Successfully uploaded payment receipt: "+b2,b="\ud83d\udd04 Uploading payment receipt: "+b2+" (Attempt ",a="\ud83d\udce6 Storage error uploading payment receipt "+b2+": ",a0="\u23f0 Timeout uploading payment receipt "+b2+": "
 case 3:if(!(a8<=a7)){s=4
 break}p=6
-A.Q().$1(b+A.h(a8+1)+")")
+A.P().$1(b+A.h(a8+1)+")")
 n=Date.now()
 a1=A.aZ("[^a-zA-Z0-9\\._-]",!0,!1,!1)
 m=A.cf(b2,a1,"_")
@@ -29608,8 +29608,8 @@ return A.k(J.aUR(k,B.v0,new A.arn(b2)),$async$ym)
 case 9:a1=a1.c
 a1===$&&A.a()
 j=new A.uf(a2,a3,"VISA-DOCUMENTS",a4,a1).GX(l)
-A.Q().$1(c)
-A.Q().$1("\ud83d\udcce Receipt URL: "+A.h(j))
+A.P().$1(c)
+A.P().$1("\ud83d\udcce Receipt URL: "+A.h(j))
 a1=j
 q=a1
 s=1
@@ -29623,7 +29623,7 @@ a1=A.W(a9)
 s=a1 instanceof A.pW?10:12
 break
 case 10:i=a1
-A.Q().$1(a0+A.h(i));++a8
+A.P().$1(a0+A.h(i));++a8
 if(a8>a7)throw a9
 s=13
 return A.k(A.fc(new A.b8(1e6*(a8*2)),null,f),$async$ym)
@@ -29632,17 +29632,17 @@ break
 case 12:s=a1 instanceof A.ue?14:16
 break
 case 14:h=a1
-A.Q().$1(a+A.h(h))
+A.P().$1(a+A.h(h))
 a1=h.a
-if(A.aQ4(a1,"Bucket not found",0)){A.Q().$1("\u274c PAYMENT-RECEIPTS bucket not found. Please create it in Supabase dashboard.")
-A.Q().$1("\ud83d\udca1 Create bucket named: PAYMENT-RECEIPTS in Storage section")}++a8
+if(A.aQ4(a1,"Bucket not found",0)){A.P().$1("\u274c PAYMENT-RECEIPTS bucket not found. Please create it in Supabase dashboard.")
+A.P().$1("\ud83d\udca1 Create bucket named: PAYMENT-RECEIPTS in Storage section")}++a8
 if(a8>a7)throw A.e(A.bI("Storage error for payment receipt "+b2+": "+h.a))
 s=17
 return A.k(A.fc(new A.b8(1e6*(a8*2)),null,f),$async$ym)
 case 17:s=15
 break
 case 16:g=a1
-A.Q().$1(e+A.h(g));++a8
+A.P().$1(e+A.h(g));++a8
 if(a8>a7)throw A.e(A.bI("Failed to upload payment receipt "+b2+" after "+A.h(a7)+" attempts: "+J.c1(g)))
 s=18
 return A.k(A.fc(new A.b8(1e6*(a8*2)),null,f),$async$ym)
@@ -29660,7 +29660,7 @@ Vg(a,b,c,d){return A.bbi(a,b,c,d)},
 bbi(a,b,c,d){var s=0,r=A.u(t.y),q,p=2,o=[],n,m,l,k
 var $async$Vg=A.p(function(e,f){if(e===1){o.push(f)
 s=p}while(true)switch(s){case 0:p=4
-A.Q().$1("\ud83d\udcf1 Opening device email app...")
+A.P().$1("\ud83d\udcf1 Opening device email app...")
 n=A.LP(null,B.b.b4(d,","),A.a7(["cc",B.b.b4(b,","),"subject",c,"body",a],t.N,t.z),"mailto").gmm()
 s=10
 return A.k(A.ka(A.cS(n,0,null)),$async$Vg)
@@ -29668,13 +29668,13 @@ case 10:s=f?7:9
 break
 case 7:s=11
 return A.k(A.jm(A.cS(n,0,null),B.iN),$async$Vg)
-case 11:A.Q().$1("\u2705 SUCCESS: Device email app opened")
+case 11:A.P().$1("\u2705 SUCCESS: Device email app opened")
 q=!0
 s=1
 break
 s=8
 break
-case 9:A.Q().$1("\u274c FAILED: Cannot launch device email app")
+case 9:A.P().$1("\u274c FAILED: Cannot launch device email app")
 q=!1
 s=1
 break
@@ -29684,7 +29684,7 @@ break
 case 4:p=3
 k=o.pop()
 m=A.W(k)
-A.Q().$1("\u274c ERROR: Device email app failed: "+A.h(m))
+A.P().$1("\u274c ERROR: Device email app failed: "+A.h(m))
 q=!1
 s=1
 break
@@ -29695,21 +29695,21 @@ break
 case 6:case 1:return A.r(q,r)
 case 2:return A.q(o.at(-1),r)}})
 return A.t($async$Vg,r)},
-aYC(a,b,c,d,e,f){A.Q().$1(B.c.a6("=",70))
-A.Q().$1("\ud83d\udce7 MANUAL EMAIL SENDING REQUIRED")
-A.Q().$1(B.c.a6("=",70))
-A.Q().$1("TO: "+B.b.b4(c,", "))
-A.Q().$1("CC: "+B.b.b4(d,", "))
-A.Q().$1("APPLICATION ID: "+e)
-if(f!=null)A.Q().$1("RECEIPT URL: "+f)
-A.Q().$1("SUBJECT: "+a)
-A.Q().$1("BODY CONTENT:")
-A.Q().$1(b)
-A.Q().$1(B.c.a6("=",70))
-A.Q().$1("Please copy the above content and send manually to:")
-A.Q().$1("TO: srinuk236@gmail.com, srinuk236.anna@gmail.com")
-A.Q().$1("CC: sreeniielts@gmail.com, gayatrilakshmibhavani@gmail.com")
-A.Q().$1(B.c.a6("=",70))},
+aYC(a,b,c,d,e,f){A.P().$1(B.c.a6("=",70))
+A.P().$1("\ud83d\udce7 MANUAL EMAIL SENDING REQUIRED")
+A.P().$1(B.c.a6("=",70))
+A.P().$1("TO: "+B.b.b4(c,", "))
+A.P().$1("CC: "+B.b.b4(d,", "))
+A.P().$1("APPLICATION ID: "+e)
+if(f!=null)A.P().$1("RECEIPT URL: "+f)
+A.P().$1("SUBJECT: "+a)
+A.P().$1("BODY CONTENT:")
+A.P().$1(b)
+A.P().$1(B.c.a6("=",70))
+A.P().$1("Please copy the above content and send manually to:")
+A.P().$1("TO: srinuk236@gmail.com, srinuk236.anna@gmail.com")
+A.P().$1("CC: sreeniielts@gmail.com, gayatrilakshmibhavani@gmail.com")
+A.P().$1(B.c.a6("=",70))},
 arm:function arm(a){this.a=a},
 arn:function arn(a){this.a=a},
 atf(){var s=0,r=A.u(t.H),q
@@ -31949,7 +31949,7 @@ break
 case 3:q=2
 k=p.pop()
 n=A.W(k)
-A.Q().$1("Error saving payment receipt: "+A.h(n))
+A.P().$1("Error saving payment receipt: "+A.h(n))
 throw k
 s=5
 break
@@ -39237,7 +39237,7 @@ else p=!1
 if(p){a.value=r.a
 q=r.b
 p=r.c
-a.setSelectionRange(Math.min(q,p),Math.max(q,p))}else throw A.e(A.aL("Unsupported DOM element type: <"+A.h(q?null:A.P(a,"tagName"))+"> ("+J.a2(a).j(0)+")"))}}}
+a.setSelectionRange(Math.min(q,p),Math.max(q,p))}else throw A.e(A.aL("Unsupported DOM element type: <"+A.h(q?null:A.Q(a,"tagName"))+"> ("+J.a2(a).j(0)+")"))}}}
 A.afF.prototype={}
 A.Qr.prototype={
 l0(){var s,r=this,q=r.w
@@ -65227,7 +65227,7 @@ return A.k(l,$async$w0)
 case 3:n=j.response
 n.toString
 o=A.akr(t.hA.a(n),0,null)
-if(o.byteLength===0)throw A.e(A.b9h(A.P(j,"status"),m))
+if(o.byteLength===0)throw A.e(A.b9h(A.Q(j,"status"),m))
 i=a
 s=4
 return A.k(A.afx(o),$async$w0)
@@ -98361,24 +98361,24 @@ this.BL()},
 BL(){var s=0,r=A.u(t.H),q=1,p=[],o=this,n,m,l,k,j
 var $async$BL=A.p(function(a,b){if(a===1){p.push(b)
 s=q}while(true)switch(s){case 0:q=3
-A.Q().$1("\ud83d\ude80 Initializing authentication...")
+A.P().$1("\ud83d\ude80 Initializing authentication...")
 n=o.d.gdj().c
 if(o.c!=null)o.C(new A.auN(o,n))
 l=o.r
 l=l==null?null:l.z
-A.Q().$1("\ud83d\udc64 Initial user: "+(l==null?"Not logged in":l))
+A.P().$1("\ud83d\udc64 Initial user: "+(l==null?"Not logged in":l))
 s=6
 return A.k(o.wi(),$async$BL)
 case 6:o.auv()
 if(o.c!=null)o.C(new A.auO(o))
-A.Q().$1("\u2705 Auth initialization complete")
+A.P().$1("\u2705 Auth initialization complete")
 q=1
 s=5
 break
 case 3:q=2
 j=p.pop()
 m=A.W(j)
-A.Q().$1("\u274c Auth initialization error: "+A.h(m))
+A.P().$1("\u274c Auth initialization error: "+A.h(m))
 if(o.c!=null)o.C(new A.auP(o))
 s=5
 break
@@ -98390,29 +98390,29 @@ return A.t($async$BL,r)},
 wi(){var s=0,r=A.u(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h
 var $async$wi=A.p(function(a,b){if(a===1){o.push(b)
 s=p}while(true)switch(s){case 0:p=4
-A.Q().$1("\ud83c\udf10 Checking web auth state...")
+A.P().$1("\ud83c\udf10 Checking web auth state...")
 j=n.e
 s=7
 return A.k(j.oQ(),$async$wi)
 case 7:m=b
-if(m)A.Q().$1("\ud83c\udf10 URL tokens processed successfully")
+if(m)A.P().$1("\ud83c\udf10 URL tokens processed successfully")
 s=8
 return A.k(j.PT(),$async$wi)
 case 8:l=b
-if(l){A.Q().$1("\ud83c\udfaf Valid password reset flow activated")
+if(l){A.P().$1("\ud83c\udfaf Valid password reset flow activated")
 if(n.c!=null)n.C(new A.auL(n))
 s=1
-break}if(j.ga36()){A.Q().$1("\u274c Auth error detected")
+break}if(j.ga36()){A.P().$1("\u274c Auth error detected")
 if(n.c!=null)n.C(new A.auM(n))
 s=1
-break}A.Q().$1("\u2705 No special auth flows detected")
+break}A.P().$1("\u2705 No special auth flows detected")
 p=2
 s=6
 break
 case 4:p=3
 h=o.pop()
 k=A.W(h)
-A.Q().$1("\u26a0\ufe0f Web auth flow check error: "+A.h(k))
+A.P().$1("\u26a0\ufe0f Web auth flow check error: "+A.h(k))
 s=6
 break
 case 3:s=2
@@ -98424,29 +98424,29 @@ auv(){var s=this.d.gdj().z
 this.w=new A.k1(s,s.$ti.h("k1<1>")).kY(new A.auU(this))},
 K(a){var s,r,q=this,p=null,o="auth_error_email",n="password_reset_required",m="supabase_recovery_token",l="supabase_recovery_type",k="auth_error_type"
 if(q.f)return A.fN(p,B.id,A.ee(A.S(A.b([B.ua,B.aV,A.l(q.ajR(),p,p,p,p,B.jx,B.aa,p,p)],t.p),B.i,p,B.aH,B.f),p,p),p,p,p,p,p)
-if(q.y){A.Q().$1("\u274c Rendering login screen with auth error")
+if(q.y){A.P().$1("\u274c Rendering login screen with auth error")
 s=q.akh(q.z)
 r=$.jg
 r=r==null?p:A.bQ(J.aj(r.a,o))
-return new A.p6(s,r==null?q.e.ik(o):r,p)}if(q.x){A.Q().$1("\ud83d\udd04 Rendering Reset Password Screen")
+return new A.p6(s,r==null?q.e.ik(o):r,p)}if(q.x){A.P().$1("\ud83d\udd04 Rendering Reset Password Screen")
 s=q.e
-A.Q().$1("\ud83d\udd0d DEBUG STORED VALUES:")
+A.P().$1("\ud83d\udd0d DEBUG STORED VALUES:")
 r=$.jg
 r=r==null?p:A.bQ(J.aj(r.a,n))
-A.Q().$1("   - password_reset_required: "+A.h(r)+" (SP) / "+A.h(s.ik(n))+" (LS)")
+A.P().$1("   - password_reset_required: "+A.h(r)+" (SP) / "+A.h(s.ik(n))+" (LS)")
 r=$.jg
 r=(r==null?p:A.bQ(J.aj(r.a,m)))!=null?"PRESENT":"null"
 s.ik(m)
-A.Q().$1("   - supabase_recovery_token: "+r+" (SP) / null (LS)")
+A.P().$1("   - supabase_recovery_token: "+r+" (SP) / null (LS)")
 r=$.jg
 r=r==null?p:A.bQ(J.aj(r.a,l))
-A.Q().$1("   - supabase_recovery_type: "+A.h(r)+" (SP) / "+A.h(s.ik(l))+" (LS)")
+A.P().$1("   - supabase_recovery_type: "+A.h(r)+" (SP) / "+A.h(s.ik(l))+" (LS)")
 r=$.jg
 r=r==null?p:A.bQ(J.aj(r.a,k))
-A.Q().$1("   - auth_error_type: "+A.h(r)+" (SP) / "+A.h(s.ik(k))+" (LS)")
+A.P().$1("   - auth_error_type: "+A.h(r)+" (SP) / "+A.h(s.ik(k))+" (LS)")
 r=$.jg
 r=r==null?p:A.bQ(J.aj(r.a,o))
-A.Q().$1("   - auth_error_email: "+A.h(r)+" (SP) / "+A.h(s.ik(o))+" (LS)")
+A.P().$1("   - auth_error_email: "+A.h(r)+" (SP) / "+A.h(s.ik(o))+" (LS)")
 return B.afU}return A.fN(p,p,A.m0(!0,q.r!=null?B.Wy:B.dq,B.aB,!0),p,p,p,p,p)},
 akh(a){switch(a){case"otp_expired":return"Your password reset link has expired. Please request a new one."
 case"access_denied":return"Access denied. The reset link is invalid or has expired."
@@ -98479,25 +98479,25 @@ s.z=s.e.ga0C()},
 $S:0}
 A.auU.prototype={
 $1(a){var s,r,q="supabase.auth.token",p="supabase.auth.refresh_token",o=a.a,n=a.b
-A.Q().$1("\ud83d\udd10 Auth Event: "+o.j(0))
+A.P().$1("\ud83d\udd10 Auth Event: "+o.j(0))
 s=n==null?null:n.r.z
-A.Q().$1("   User: "+(s==null?"No user":s))
+A.P().$1("   User: "+(s==null?"No user":s))
 s=this.a
 if(s.c!=null){s.C(new A.auQ(s,n))
 r=s.c
 r.toString
 A.b9V(r,!1,t.W0).aDs(s.r)
-switch(o.a){case 1:A.Q().$1("\ud83d\udd04 Password recovery event detected")
+switch(o.a){case 1:A.P().$1("\ud83d\udd04 Password recovery event detected")
 if(s.c!=null)s.C(new A.auR(s))
 break
-case 2:A.Q().$1("\u2705 User signed in successfully")
+case 2:A.P().$1("\u2705 User signed in successfully")
 r=s.e
 r.a12()
 r.xv()
 r.Mu()
 if(s.c!=null)s.C(new A.auS(s))
 break
-case 3:A.Q().$1("\ud83d\udeaa User signed out")
+case 3:A.P().$1("\ud83d\udeaa User signed out")
 r=s.e
 r.a12()
 r.xv()
@@ -98505,7 +98505,7 @@ r.io(q)
 r.io(p)
 r.kv(q)
 r.kv(p)
-A.Q().$1("\u2705 Auth tokens cleared")
+A.P().$1("\u2705 Auth tokens cleared")
 r.Mu()
 if(s.c!=null)s.C(new A.auT(s))
 break
@@ -98654,7 +98654,7 @@ e=o.pop()
 i=A.W(e)
 if(m.c==null){n=[1]
 s=5
-break}A.Q().$1("Email sending error: "+A.h(i))
+break}A.P().$1("Email sending error: "+A.h(i))
 h="JRR GO AI Assistant Inquiry - "+m.x.a.a
 g=m.Sn()
 m.So(h,g)
@@ -98697,7 +98697,7 @@ break
 case 4:p=3
 h=o.pop()
 l=A.W(h)
-A.Q().$1("Edge Function email error: "+A.h(l))
+A.P().$1("Edge Function email error: "+A.h(l))
 q=!1
 s=1
 break
@@ -98951,12 +98951,12 @@ if(s!=null)r.as=s
 r.agi()},
 agi(){$.ae.k4$.push(new A.aBQ(this))},
 aon(){var s,r,q=this
-A.Q().$1("\ud83c\udf10 Checking web auth state...")
+A.P().$1("\ud83c\udf10 Checking web auth state...")
 s=q.w
 if(s.ga36()){r=s.ga0C()
-A.Q().$1("\u274c Stored auth error detected: "+A.h(r))
+A.P().$1("\u274c Stored auth error detected: "+A.h(r))
 if(q.c!=null)q.C(new A.aBR(q,r))
-s.Mu()}if(s.gEZ()){A.Q().$1("\ud83d\udd11 Password reset detected from stored tokens")
+s.Mu()}if(s.gEZ()){A.P().$1("\ud83d\udd11 Password reset detected from stored tokens")
 q.YX("Password reset successful! You can now login with your new password.")
 s.xv()}},
 wR(){var s=0,r=A.u(t.H),q,p=2,o=[],n=[],m=this,l,k,j,i,h,g
@@ -98969,7 +98969,7 @@ p=4
 s=7
 return A.k(m.r.vn(m.d.a.a,m.e.a.a),$async$wR)
 case 7:l=b
-if(m.c!=null&&l!=null){A.Q().$1("\u2705 Login successful, navigating to main screen")
+if(m.c!=null&&l!=null){A.P().$1("\u2705 Login successful, navigating to main screen")
 i=m.c
 i.toString
 A.aS(i,!1).a5g(A.el(new A.aC0(),null,t.z))}n.push(6)
@@ -98980,7 +98980,7 @@ g=o.pop()
 k=A.W(g)
 i=J.c1(k)
 j=A.cf(i,"Exception: ","")
-A.Q().$1("\u274c Login error: "+A.h(j))
+A.P().$1("\u274c Login error: "+A.h(j))
 if(m.c!=null){i=j
 if(B.c.n(i,"Email not verified"))m.av9(i)
 else m.WH(i)}n.push(6)
@@ -99216,20 +99216,20 @@ D7(){var s=0,r=A.u(t.H),q,p=2,o=[],n=[],m=this,l,k,j,i,h
 var $async$D7=A.p(function(a,b){if(a===1){o.push(b)
 s=p}while(true)switch(s){case 0:m.C(new A.aFy(m))
 p=4
-A.Q().$1("\ud83d\udd0d Checking reset session...")
+A.P().$1("\ud83d\udd0d Checking reset session...")
 j=m.w
-if(j.gEZ()){A.Q().$1("\u2705 Valid reset session via WebAuthHandler")
+if(j.gEZ()){A.P().$1("\u2705 Valid reset session via WebAuthHandler")
 m.YL()
 n=[1]
 s=5
 break}s=7
 return A.k(j.oQ(),$async$D7)
 case 7:l=b
-if(l){A.Q().$1("\u2705 Valid reset session from URL tokens")
+if(l){A.P().$1("\u2705 Valid reset session from URL tokens")
 m.YL()
 n=[1]
 s=5
-break}A.Q().$1("\u274c No valid reset session found")
+break}A.P().$1("\u274c No valid reset session found")
 m.YJ("Invalid or expired reset link. Please request a new password reset.")
 n.push(6)
 s=5
@@ -99237,7 +99237,7 @@ break
 case 4:p=3
 h=o.pop()
 k=A.W(h)
-A.Q().$1("\u274c Session verification error: "+A.h(k))
+A.P().$1("\u274c Session verification error: "+A.h(k))
 m.YJ("Error verifying reset session. Please try again.")
 n.push(6)
 s=5
@@ -99262,7 +99262,7 @@ break}if(!n.as){n.YU("Reset session is no longer valid. Please request a new res
 s=1
 break}n.C(new A.aFp(n))
 p=4
-A.Q().$1("\ud83d\udd04 Starting password reset process...")
+A.P().$1("\ud83d\udd04 Starting password reset process...")
 s=7
 return A.k(n.r.ng(k.a.a),$async$wK)
 case 7:if(n.c!=null){n.C(new A.aFq(n))
@@ -99276,7 +99276,7 @@ i=o.pop()
 m=A.W(i)
 k=J.c1(m)
 l=A.cf(k,"Exception: ","")
-A.Q().$1("\u274c Password reset error: "+A.h(l))
+A.P().$1("\u274c Password reset error: "+A.h(l))
 if(n.c!=null){n.C(new A.aFs(n))
 if(J.kf(l,"expired")||J.kf(l,"invalid"))n.YU(u.M)
 else n.c.S(t.q).f.bM(A.dD(null,null,null,B.a1,null,B.D,null,A.l("Reset failed: "+A.h(l),null,null,null,null,null,null,null,null),null,B.aF,null,null,null,null,null,null,null,null,null))}s=6
@@ -99488,12 +99488,12 @@ break
 case 11:p=10
 a=o.pop()
 i=A.W(a)
-A.Q().$1("\u26a0\ufe0f Profile creation warning: "+A.h(i))
+A.P().$1("\u26a0\ufe0f Profile creation warning: "+A.h(i))
 s=13
 break
 case 10:s=4
 break
-case 13:A.Q().$1("\u2705 Signup successful, navigating to verification screen")
+case 13:A.P().$1("\u2705 Signup successful, navigating to verification screen")
 f=m.c
 f.toString
 A.aS(f,!1).a5g(A.el(new A.aGv(m),null,t.z))
@@ -99505,7 +99505,7 @@ a0=o.pop()
 h=A.W(a0)
 f=J.c1(h)
 g=A.cf(f,"Exception: ","")
-A.Q().$1("\u274c Signup error: "+A.h(g))
+A.P().$1("\u274c Signup error: "+A.h(g))
 if(m.c!=null)m.KQ("Sign up failed: "+A.h(g))
 n.push(6)
 s=5
@@ -99859,7 +99859,7 @@ case 4:p=3
 f=o.pop()
 j=A.W(f)
 if(n.c==null){s=1
-break}A.Q().$1("Email sending error: "+A.h(j))
+break}A.P().$1("Email sending error: "+A.h(j))
 i="JRR GO Forex Service Request - "+n.e.a.a+" - "+n.ay
 h=n.UH()
 n.UJ(i,h)
@@ -99891,7 +99891,7 @@ break
 case 4:p=3
 h=o.pop()
 l=A.W(h)
-A.Q().$1("Edge Function email error: "+A.h(l))
+A.P().$1("Edge Function email error: "+A.h(l))
 q=!1
 s=1
 break
@@ -100398,7 +100398,7 @@ c=o.pop()
 g=A.W(c)
 if(m.c==null){n=[1]
 s=5
-break}A.Q().$1("Email sending error: "+A.h(g))
+break}A.P().$1("Email sending error: "+A.h(g))
 f="JRR GO Immigration Advice Request - "+m.f.a.a
 e=m.UP(l)
 m.YV(f,e,l)
@@ -100459,7 +100459,7 @@ break
 case 4:p=3
 i=o.pop()
 m=A.W(i)
-A.Q().$1("Edge Function email error: "+A.h(m))
+A.P().$1("Edge Function email error: "+A.h(m))
 q=!1
 s=1
 break
@@ -101548,7 +101548,7 @@ break}m.C(new A.aIg(m))
 p=4
 l=B.c.bL(m.d.a.a)
 k=B.c.bL(m.e.a.a).toLowerCase()
-A.Q().$1("\ud83d\udd0d Searching for application: "+A.h(l)+", email: "+A.h(k))
+A.P().$1("\ud83d\udd0d Searching for application: "+A.h(l)+", email: "+A.h(k))
 s=7
 return A.k(A.a98(l,k),$async$pP)
 case 7:j=a6
@@ -101556,7 +101556,7 @@ m.apu(j)
 s=j!=null&&J.iI(j)?8:10
 break
 case 8:i=A.bz(J.aj(j,"id"))
-A.Q().$1("\u2705 Application found, fetching additional data...")
+A.P().$1("\u2705 Application found, fetching additional data...")
 p=12
 s=15
 return A.k(A.a9a(i),$async$pP)
@@ -101572,17 +101572,17 @@ e=J.mw(h,a0)
 d=J.mw(f,a0)
 a0=J.c5(e.ghj())
 a1=g!=null?"Yes":"No"
-A.Q().$1("\ud83d\udcca Data retrieved - Stages: "+a0+", Payment: "+a1+", Documents: "+J.c5(d.ghj()))
+A.P().$1("\ud83d\udcca Data retrieved - Stages: "+a0+", Payment: "+a1+", Documents: "+J.c5(d.ghj()))
 c=m.ajk(j,e,g,d)
 m.C(new A.aIh(m,c,e))
-A.Q().$1("\u2705 Application data loaded successfully")
+A.P().$1("\u2705 Application data loaded successfully")
 p=4
 s=14
 break
 case 12:p=11
 a3=o.pop()
 b=A.W(a3)
-A.Q().$1("\ud83d\udca5 Error fetching related data: "+A.h(b))
+A.P().$1("\ud83d\udca5 Error fetching related data: "+A.h(b))
 a0=A.bI("Failed to load application details: "+A.h(b))
 throw A.e(a0)
 s=14
@@ -101591,7 +101591,7 @@ case 11:s=4
 break
 case 14:s=9
 break
-case 10:A.Q().$1("\u274c No application found with provided details")
+case 10:A.P().$1("\u274c No application found with provided details")
 m.C(new A.aIi(m))
 a0=m.c
 if(a0!=null)a0.S(t.q).f.bM(B.aiD)
@@ -101601,7 +101601,7 @@ break
 case 4:p=3
 a4=o.pop()
 a=A.W(a4)
-A.Q().$1("\ud83d\udca5 Error searching application: "+A.h(a))
+A.P().$1("\ud83d\udca5 Error searching application: "+A.h(a))
 a0=m.c
 if(a0!=null)a0.S(t.q).f.bM(A.dD(null,null,null,B.a1,null,B.D,null,A.l("Error searching application: "+J.c1(a),null,null,null,null,null,null,null,null),null,B.aF,null,null,null,null,null,null,null,null,null))
 n.push(6)
@@ -101616,18 +101616,18 @@ case 6:case 1:return A.r(q,r)
 case 2:return A.q(o.at(-1),r)}})
 return A.t($async$pP,r)},
 apu(a){var s
-if(a==null){A.Q().$1("\ud83d\udced Database returned null application data")
-return}A.Q().$1("\ud83d\udccb APPLICATION DATA FROM DATABASE:")
+if(a==null){A.P().$1("\ud83d\udced Database returned null application data")
+return}A.P().$1("\ud83d\udccb APPLICATION DATA FROM DATABASE:")
 s=J.aP(a)
-A.Q().$1("  - ID: "+A.h(s.i(a,"id")))
-A.Q().$1("  - Application ID: "+A.h(s.i(a,"application_id")))
-A.Q().$1("  - Name: "+A.h(s.i(a,"first_name"))+" "+A.h(s.i(a,"last_name")))
-A.Q().$1("  - Email: "+A.h(s.i(a,"email")))
-A.Q().$1("  - Status: "+A.h(s.i(a,"status")))
-A.Q().$1("  - Visa Type: "+A.h(s.i(a,"visa_type")))
-A.Q().$1("  - Country: "+A.h(s.i(a,"destination_country")))
-A.Q().$1("  - Created: "+A.h(s.i(a,"created_at")))
-A.Q().$1("  - Updated: "+A.h(s.i(a,"updated_at")))},
+A.P().$1("  - ID: "+A.h(s.i(a,"id")))
+A.P().$1("  - Application ID: "+A.h(s.i(a,"application_id")))
+A.P().$1("  - Name: "+A.h(s.i(a,"first_name"))+" "+A.h(s.i(a,"last_name")))
+A.P().$1("  - Email: "+A.h(s.i(a,"email")))
+A.P().$1("  - Status: "+A.h(s.i(a,"status")))
+A.P().$1("  - Visa Type: "+A.h(s.i(a,"visa_type")))
+A.P().$1("  - Country: "+A.h(s.i(a,"destination_country")))
+A.P().$1("  - Created: "+A.h(s.i(a,"created_at")))
+A.P().$1("  - Updated: "+A.h(s.i(a,"updated_at")))},
 ajk(a3,a4,a5,a6){var s,r,q,p,o,n,m,l,k,j,i,h,g=null,f="created_at",e="dd MMM yyyy",d="updated_at",c="amount",b="payment_method",a="Not provided",a0=J.aP(a3),a1=a0.i(a3,"status"),a2=a1==null?g:J.c1(a1)
 if(a2==null)a2="submitted"
 s=a0.i(a3,f)!=null?A.dK(e,g).d1(A.oB(J.c1(a0.i(a3,f))).Gu()):"Not available"
@@ -101677,7 +101677,7 @@ case"in_progress":i=B.aiO
 break
 default:i=B.fh}r=null
 if(J.aj(s,g)!=null)try{r=A.oB(J.aj(s,g)).Gu()}catch(h){q=A.W(h)
-A.Q().$1("Error parsing completed_at: "+A.h(q))}p[j]=p[j].a1r(r,i)}},
+A.P().$1("Error parsing completed_at: "+A.h(q))}p[j]=p[j].a1r(r,i)}},
 ake(a,b){switch(a){case"submitted":return"Application submitted successfully. Waiting for payment confirmation."
 case"payment_pending":return"Payment pending. Please complete the payment to proceed."
 case"under_review":return"Application is under review. Our team is processing your documents."
@@ -102105,7 +102105,7 @@ case 4:p=3
 f=o.pop()
 j=A.W(f)
 if(n.c==null){s=1
-break}A.Q().$1("Email sending error: "+A.h(j))
+break}A.P().$1("Email sending error: "+A.h(j))
 i=u.I+n.e.a.a+" "+n.f.a.a
 h=n.a_S()
 n.a_V(i,h)
@@ -102155,7 +102155,7 @@ break
 case 4:p=3
 h=o.pop()
 l=A.W(h)
-A.Q().$1("Edge Function email error: "+A.h(l))
+A.P().$1("Edge Function email error: "+A.h(l))
 q=!1
 s=1
 break
@@ -102654,7 +102654,7 @@ q.G$=n
 q.B$=0}p.aw()},
 CU(){var s=0,r=A.u(t.H)
 var $async$CU=A.p(function(a,b){if(a===1)return A.q(b,r)
-while(true)switch(s){case 0:A.Q().$1("\ud83e\uddea Testing Supabase storage connection...")
+while(true)switch(s){case 0:A.P().$1("\ud83e\uddea Testing Supabase storage connection...")
 s=2
 return A.k(A.Gy(),$async$CU)
 case 2:return A.r(null,r)}})
@@ -102820,11 +102820,11 @@ return null},
 pH(a){var s,r,q,p,o,n,m
 for(s=this.p,r=s.length,q=0,p=0,o=0;o<r;++o){n=s[o].e
 if(n!=null){q+=n.length;++p}}for(r=this.r,n=r.length,o=0;o<n;++o){m=r[o].e
-if(m!=null){q+=m.length;++p}}A.Q().$1("\ud83e\udde0 MEMORY USAGE at ["+a+"]:")
-A.Q().$1("   \ud83d\udcc1 Documents with active bytes: "+p)
-A.Q().$1("   \ud83d\udcbe Total memory used: "+B.d.af(q/1048576,2)+" MB")
-A.Q().$1("   \ud83d\udcca Step 1 docs: "+s.length)
-A.Q().$1("   \ud83d\udcca Step 2 docs: "+r.length)},
+if(m!=null){q+=m.length;++p}}A.P().$1("\ud83e\udde0 MEMORY USAGE at ["+a+"]:")
+A.P().$1("   \ud83d\udcc1 Documents with active bytes: "+p)
+A.P().$1("   \ud83d\udcbe Total memory used: "+B.d.af(q/1048576,2)+" MB")
+A.P().$1("   \ud83d\udcca Step 1 docs: "+s.length)
+A.P().$1("   \ud83d\udcca Step 2 docs: "+r.length)},
 px(a,b){var s=null
 return new A.as(B.VD,A.ag(A.b([A.bh(A.l(a,s,s,s,s,A.bb(s,s,B.ak,s,s,s,s,s,s,s,s,11,s,s,B.q,s,s,!0,s,s,s,s,s,s,s,s),s,s,s),s,60),A.ak(A.l(b,s,s,s,s,A.bb(s,s,B.as,s,s,s,s,s,s,s,s,11,s,s,s,s,s,!0,s,s,s,s,s,s,s,s),s,s,s),1)],t.p),B.p,B.e,B.f,0),s)},
 kA(a){return this.ah7(a)},
@@ -102842,7 +102842,7 @@ break
 case 8:p=7
 f=o.pop()
 l=A.W(f)
-A.Q().$1("Clipboard copy failed: "+A.h(l))
+A.P().$1("Clipboard copy failed: "+A.h(l))
 m=!1
 s=10
 break
@@ -102865,7 +102865,7 @@ break
 case 4:p=3
 e=o.pop()
 j=A.W(e)
-A.Q().$1("Error in copy to clipboard: "+A.h(j))
+A.P().$1("Error in copy to clipboard: "+A.h(j))
 k=n.c
 if(k==null){s=1
 break}k.S(t.q).f.bM(A.dD(null,null,null,B.a6,null,B.D,null,A.S(A.b([B.aqN,A.l(a,null,null,null,null,B.ak0,null,null,null),B.apv],t.p),B.p,null,B.e,B.Y),null,B.Vi,null,null,null,null,null,null,null,null,null))
@@ -102964,7 +102964,7 @@ break
 case 3:q=2
 k=p.pop()
 n=A.W(k)
-A.Q().$1("Warning: Failed to save payment receipt to database: "+A.h(n))
+A.P().$1("Warning: Failed to save payment receipt to database: "+A.h(n))
 s=5
 break
 case 2:s=1
@@ -102983,7 +102983,7 @@ if(o==null)o=r
 return o}if(B.c.n(a.toLowerCase(),"heic"))return"heic"
 if(B.c.n(a.toLowerCase(),"heif"))return"heif"
 return m}catch(n){p=A.W(n)
-A.Q().$1("\u274c ERROR in _getFileExtension: "+A.h(p))
+A.P().$1("\u274c ERROR in _getFileExtension: "+A.h(p))
 return m}},
 axk(a){var s=J.c1(a).toLowerCase()
 if(B.c.n(s,"permission")||B.c.n(s,"access"))return"File access denied. Please check app permissions."
@@ -103271,7 +103271,7 @@ if(l==null||l.length===0){j.push(o+": File is empty or cannot be read. Please tr
 continue}if(B.b.iv(r,new A.aMs(p))||B.b.iv(q,new A.aMt(p))){j.push(o+": File already uploaded in current application")
 continue}i.push(new A.hi(o,null,m,n,l,null,"pending"))}k.C(new A.aMu(k,i,j))
 s=i.length
-if(s!==0)A.Q().$1("\u2705 Step 1: Added "+s+" files with bytes: "+new A.a9(i,new A.aMv(),t.UL).b4(0,", "))
+if(s!==0)A.P().$1("\u2705 Step 1: Added "+s+" files with bytes: "+new A.a9(i,new A.aMv(),t.UL).b4(0,", "))
 k.pH("After processing Step 1 files")},
 aeE(){var s=this,r=null,q=t.p,p=A.b([A.t6(!0,B.wc,new A.aK5(s),r,B.aqk,A.ci(s.f?B.WQ:B.WR,B.au,r,r))],q)
 if(s.f)B.b.N(p,A.b([B.A,s.af0()],q))
@@ -103299,7 +103299,7 @@ arq(a){var s=0,r=A.u(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f
 var $async$pJ=A.p(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
 m="upi://pay?pa="+A.h($.iG.i(0,"upiId"))+"&pn="+A.iD(2,$.iG.i(0,"name"),B.ah,!1)+"&am="+B.k.j(n.gj4())+"&cu=INR&tn="+A.iD(2,$.iG.i(0,"note"),B.ah,!1)
-A.Q().$1("Opening UPI URL: "+A.h(m))
+A.P().$1("Opening UPI URL: "+A.h(m))
 l=A.cS(m,0,null)
 s=10
 return A.k(A.ka(l),$async$pJ)
@@ -103332,7 +103332,7 @@ break
 case 4:p=3
 f=o.pop()
 j=A.W(f)
-A.Q().$1("Error opening UPI app: "+A.h(j))
+A.P().$1("Error opening UPI app: "+A.h(j))
 i=n.c
 if(i==null){s=1
 break}i.S(t.q).f.bM(A.dD(null,null,null,B.a1,null,B.D,null,A.l("Could not open "+A.h(J.aj(a,"name"))+". Please use manual payment method.",null,null,null,null,null,null,null,null),null,B.aF,null,null,null,null,null,null,null,null,null))
@@ -103621,7 +103621,7 @@ break
 case 3:q=2
 e=p.pop()
 l=A.W(e)
-A.Q().$1("Error in date picker: "+A.h(l))
+A.P().$1("Error in date picker: "+A.h(l))
 k=o.c
 if(k!=null)k.S(t.q).f.bM(A.dD(null,null,null,B.a1,null,B.D,null,A.l("Error selecting date: "+A.h(l),null,null,null,null,null,null,null,null),null,B.aF,null,null,null,null,null,null,null,null,null))
 s=5
@@ -103852,7 +103852,7 @@ i=o.pop()
 k=A.W(i)
 if(m.c==null){n=[1]
 s=5
-break}A.Q().$1("Email sending error: "+A.h(k))
+break}A.P().$1("Email sending error: "+A.h(k))
 m.a_Z(a,b)
 n.push(6)
 s=5
@@ -103883,7 +103883,7 @@ break
 case 4:p=3
 i=o.pop()
 m=A.W(i)
-A.Q().$1("Edge Function email error: "+A.h(m))
+A.P().$1("Edge Function email error: "+A.h(m))
 q=!1
 s=1
 break
@@ -103901,17 +103901,17 @@ a_Y(){var s=null,r=this.c
 r.toString
 A.cV(s,s,!0,s,new A.aMZ(this),r,s,!0,t.z)},
 a_X(){var s,r,q,p,o,n=this,m="\ud83e\uddf9 Cleared bytes for document: "
-A.Q().$1("\ud83e\uddf9 Starting form reset with memory cleanup...")
+A.P().$1("\ud83e\uddf9 Starting form reset with memory cleanup...")
 n.pH("Before reset")
 for(s=n.p,r=s.length,q=0;q<s.length;s.length===r||(0,A.M)(s),++q){p=s[q]
 p.e=null
-A.Q().$1(m+p.a)}for(r=n.r,o=r.length,q=0;q<r.length;r.length===o||(0,A.M)(r),++q){p=r[q]
+A.P().$1(m+p.a)}for(r=n.r,o=r.length,q=0;q<r.length;r.length===o||(0,A.M)(r),++q){p=r[q]
 p.e=null
-A.Q().$1(m+p.a)}B.b.a7(s)
+A.P().$1(m+p.a)}B.b.a7(s)
 B.b.a7(r)
 n.C(new A.aMy(n))
 n.pH("After reset")
-A.Q().$1("\u2705 Form reset completed with memory cleanup")},
+A.P().$1("\u2705 Form reset completed with memory cleanup")},
 nZ(a,b){return this.ax2(a,b)},
 ax2(b5,b6){var s=0,r=A.u(t.y),q,p=2,o=[],n=[],m=this,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3,a4,a5,a6,a7,a8,a9,b0,b1,b2,b3,b4
 var $async$nZ=A.p(function(b7,b8){if(b7===1){o.push(b8)
@@ -103920,7 +103920,7 @@ b0=A.ab(a9,t.j2)
 b1=m.r
 B.b.N(b0,b1)
 l=b0
-if(J.c5(l)===0){A.Q().$1("\ud83d\udced No documents to upload")
+if(J.c5(l)===0){A.P().$1("\ud83d\udced No documents to upload")
 q=!0
 s=1
 break}m.pH("Before upload process")
@@ -103928,15 +103928,15 @@ m.C(new A.aNe(m))
 p=4
 k=0
 j=J.c5(l)
-A.Q().$1("\ud83d\ude80 Starting upload of "+A.h(j)+" documents")
+A.P().$1("\ud83d\ude80 Starting upload of "+A.h(j)+" documents")
 i=0,b0=t.z,a3=b5+"_"
 case 7:if(!(i<j)){s=9
 break}h=J.aj(l,i)
 g=i<a9.length
-if(h.e==null){A.Q().$1("\u26a0\ufe0f Skipping "+h.a+": No bytes available")
+if(h.e==null){A.P().$1("\u26a0\ufe0f Skipping "+h.a+": No bytes available")
 s=8
 break}f=B.d.af(h.e.length/1048576,2)
-A.Q().$1("\ud83d\udce4 Uploading "+h.a+" ("+A.h(f)+" MB)...")
+A.P().$1("\ud83d\udce4 Uploading "+h.a+" ("+A.h(f)+" MB)...")
 p=11
 if(g)a9[i]=a9[i].DV("uploading")
 else{e=i-a9.length
@@ -103956,7 +103956,7 @@ break
 case 15:p=14
 b2=o.pop()
 c=A.W(b2)
-A.Q().$1("\u274c First upload attempt failed for "+h.a+": "+A.h(c))
+A.P().$1("\u274c First upload attempt failed for "+h.a+": "+A.h(c))
 s=19
 return A.k(A.fc(B.fN,null,b0),$async$nZ)
 case 19:a4=h.a
@@ -103978,12 +103978,12 @@ return A.k(A.a9b(b6,a4,a5,d,a8),$async$nZ)
 case 21:if(g){a9[i]=a9[i].MO(d,"uploaded")
 a4=a9[i]
 a4.e=null
-A.Q().$1("\ud83e\uddf9 Cleared bytes for document: "+a4.a)}else{b=i-a9.length
+A.P().$1("\ud83e\uddf9 Cleared bytes for document: "+a4.a)}else{b=i-a9.length
 b1[b]=b1[b].MO(d,"uploaded")
 a4=b1[b]
 a4.e=null
-A.Q().$1("\ud83e\uddf9 Cleared bytes for document: "+a4.a)}++k
-A.Q().$1("\u2705 Successfully uploaded: "+h.a+" - Bytes cleared from memory")
+A.P().$1("\ud83e\uddf9 Cleared bytes for document: "+a4.a)}++k
+A.P().$1("\u2705 Successfully uploaded: "+h.a+" - Bytes cleared from memory")
 s=22
 return A.k(A.fc(B.eI,null,b0),$async$nZ)
 case 22:p=4
@@ -103992,7 +103992,7 @@ break
 case 11:p=10
 b3=o.pop()
 a=A.W(b3)
-A.Q().$1("\u274c Failed to upload "+h.a+": "+A.h(a))
+A.P().$1("\u274c Failed to upload "+h.a+": "+A.h(a))
 if(g)a9[i]=a9[i].DV("failed")
 else{a0=i-a9.length
 b1[a0]=b1[a0].DV("failed")}s=13
@@ -104007,7 +104007,7 @@ break
 case 9:m.pH("After upload process")
 a1=j-k
 if(a1>0)m.c.S(t.q).f.bM(A.dD(null,null,null,B.au,null,B.D,null,A.l(A.h(a1)+" document(s) failed to upload. Check email for details.",null,null,null,null,null,null,null,null),null,B.aF,null,null,null,null,null,null,null,null,null))
-A.Q().$1("\ud83d\udcca Upload Summary: "+A.h(k)+"/"+A.h(j)+" successful")
+A.P().$1("\ud83d\udcca Upload Summary: "+A.h(k)+"/"+A.h(j)+" successful")
 a9=k
 q=a9>0
 n=[1]
@@ -104019,7 +104019,7 @@ break
 case 4:p=3
 b4=o.pop()
 a2=A.W(b4)
-A.Q().$1("\ud83d\udca5 Upload process failed: "+A.h(a2))
+A.P().$1("\ud83d\udca5 Upload process failed: "+A.h(a2))
 m.c.S(t.q).f.bM(A.dD(null,null,null,B.a1,null,B.D,null,A.l("Document upload failed: "+J.c1(a2),null,null,null,null,null,null,null,null),null,B.aF,null,null,null,null,null,null,null,null,null))
 q=!1
 n=[1]
@@ -104071,7 +104071,7 @@ break
 case 12:p=11
 a3=o.pop()
 j=A.W(a3)
-A.Q().$1("Warning: Failed to save passport details for passenger "+A.h(k+1)+": "+A.h(j))
+A.P().$1("Warning: Failed to save passport details for passenger "+A.h(k+1)+": "+A.h(j))
 s=14
 break
 case 11:s=4
@@ -104113,7 +104113,7 @@ break
 case 3:q=2
 i=p.pop()
 n=A.W(i)
-A.Q().$1("Warning: Failed to save payment record: "+A.h(n))
+A.P().$1("Warning: Failed to save payment record: "+A.h(n))
 s=5
 break
 case 2:s=1
@@ -105255,7 +105255,7 @@ a8g(a,b){var s=0,r=A.u(t.t6),q,p=2,o=[],n=this,m,l,k,j,i,h,g
 var $async$vn=A.p(function(c,d){if(c===1){o.push(d)
 s=p}while(true)switch(s){case 0:p=4
 j=B.c.bL(a)
-A.Q().$1("\ud83d\udd10 Attempting sign in for: "+j)
+A.P().$1("\ud83d\udd10 Attempting sign in for: "+j)
 i=n.a
 s=7
 return A.k(i.gdj().vo(j,b),$async$vn)
@@ -105269,7 +105269,7 @@ return A.k(i.gdj().iW(),$async$vn)
 case 10:j=A.bI('Email not verified. Please check your inbox for verification link or use "Resend Verification" option.')
 throw A.e(j)
 case 9:j=m.b
-A.Q().$1("\u2705 Sign in successful for: "+A.h(j==null?null:j.z))
+A.P().$1("\u2705 Sign in successful for: "+A.h(j==null?null:j.z))
 j=m.b
 q=j
 s=1
@@ -105281,9 +105281,9 @@ case 4:p=3
 g=o.pop()
 j=A.W(g)
 if(j instanceof A.fY){l=j
-A.Q().$1("\u274c AuthException during sign in: "+l.a)
+A.P().$1("\u274c AuthException during sign in: "+l.a)
 throw A.e(A.bI(n.wc(l.a)))}else{k=j
-A.Q().$1("\u274c General error during sign in: "+A.h(k))
+A.P().$1("\u274c General error during sign in: "+A.h(k))
 j=A.bI("Sign in failed. Please try again.")
 throw A.e(j)}s=6
 break
@@ -105297,7 +105297,7 @@ a8k(a,b,c){var s=0,r=A.u(t.t6),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e
 var $async$pi=A.p(function(d,a0){if(d===1){o.push(a0)
 s=p}while(true)switch(s){case 0:p=4
 i=B.c.bL(a)
-A.Q().$1("\ud83d\udd04 Starting signup process for: "+i)
+A.P().$1("\ud83d\udd04 Starting signup process for: "+i)
 s=7
 return A.k(n.rD(i,c),$async$pi)
 case 7:m=a0
@@ -105307,17 +105307,17 @@ s=8
 return A.k(h.gdj().vp(b,i,"https://www.jrrgo.com/auth-callback.html",c),$async$pi)
 case 8:l=a0
 i=l.b
-A.Q().$1("\u2705 Signup API completed for: "+A.h(i==null?null:i.z))
+A.P().$1("\u2705 Signup API completed for: "+A.h(i==null?null:i.z))
 i=l.b
-A.Q().$1("\ud83d\udce7 Email confirmed: "+A.h(i==null?null:i.ax))
+A.P().$1("\ud83d\udce7 Email confirmed: "+A.h(i==null?null:i.ax))
 if(l.b!=null){i=l.b
 i=(i==null?null:i.ax)==null}else i=!1
 s=i?9:11
 break
-case 9:A.Q().$1("\ud83d\udce8 Email verification required - sending verification email")
+case 9:A.P().$1("\ud83d\udce8 Email verification required - sending verification email")
 s=12
 return A.k(h.gdj().iW(),$async$pi)
-case 12:A.Q().$1("\ud83d\udeab Signed out to enforce email verification")
+case 12:A.P().$1("\ud83d\udeab Signed out to enforce email verification")
 i=l.b
 q=i
 s=1
@@ -105341,11 +105341,11 @@ case 4:p=3
 e=o.pop()
 i=A.W(e)
 if(i instanceof A.fY){k=i
-A.Q().$1("\u274c AuthException during signup: "+k.a)
+A.P().$1("\u274c AuthException during signup: "+k.a)
 f=k.a.toLowerCase()
 if(B.c.n(f,"already registered")||B.c.n(f,"user_exists")||B.c.n(f,"already in use"))throw A.e(A.bI('An account with this email already exists. Please check your email for verification link or use "Forgot Password".'))
 throw A.e(A.bI("Sign up failed: "+n.wc(k.a)))}else{j=i
-A.Q().$1("\u274c General error during signup: "+A.h(j))
+A.P().$1("\u274c General error during signup: "+A.h(j))
 i=A.bI("Sign up failed. Please try again.")
 throw A.e(i)}s=6
 break
@@ -105359,10 +105359,10 @@ aHh(a){var s=0,r=A.u(t.y),q,p=2,o=[],n=this,m,l,k,j,i
 var $async$Gn=A.p(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
 k=B.c.bL(a)
-A.Q().$1("\ud83d\udd04 Sending password reset email to: "+k)
+A.P().$1("\ud83d\udd04 Sending password reset email to: "+k)
 s=7
 return A.k(n.a.gdj().zr(k,"https://www.jrrgo.com/auth-callback.html"),$async$Gn)
-case 7:A.Q().$1("\u2705 Password reset email sent successfully")
+case 7:A.P().$1("\u2705 Password reset email sent successfully")
 q=!0
 s=1
 break
@@ -105373,10 +105373,10 @@ case 4:p=3
 i=o.pop()
 k=A.W(i)
 if(k instanceof A.fY){m=k
-A.Q().$1("\u274c AuthException in resetPassword: "+m.a)
+A.P().$1("\u274c AuthException in resetPassword: "+m.a)
 if(B.c.n(m.a.toLowerCase(),"rate limit"))throw A.e(A.bI("Please wait 60 seconds before requesting another reset email."))
 throw A.e(A.bI("Failed to send reset email: "+n.wc(m.a)))}else{l=k
-A.Q().$1("\u274c General error in resetPassword: "+A.h(l))
+A.P().$1("\u274c General error in resetPassword: "+A.h(l))
 k=A.bI("Failed to send reset email. Please try again.")
 throw A.e(k)}s=6
 break
@@ -105389,29 +105389,29 @@ ng(a){return this.aI7(a)},
 aI7(a1){var s=0,r=A.u(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d,c,b,a,a0
 var $async$ng=A.p(function(a2,a3){if(a2===1){o.push(a3)
 s=p}while(true)switch(s){case 0:p=4
-A.Q().$1("\ud83d\udd04 Starting password update process")
+A.P().$1("\ud83d\udd04 Starting password update process")
 s=7
 return A.k(A.y4(),$async$ng)
 case 7:m=a3
 l=A.bQ(J.aj(m.a,"supabase_recovery_token"))
 k=A.bQ(J.aj(m.a,"supabase_recovery_type"))
-A.Q().$1("\ud83d\udd10 Recovery token available: "+(l!=null))
-A.Q().$1("\ud83d\udd10 Recovery type: "+A.h(k))
+A.P().$1("\ud83d\udd10 Recovery token available: "+(l!=null))
+A.P().$1("\ud83d\udd10 Recovery type: "+A.h(k))
 s=l!=null&&J.d(k,"recovery")?8:9
 break
-case 8:A.Q().$1("\ud83d\udd04 Establishing session with recovery token...")
+case 8:A.P().$1("\ud83d\udd04 Establishing session with recovery token...")
 p=11
 d=n.a
 s=14
 return A.k(d.gdj().Ak(l),$async$ng)
 case 14:j=a3
 c=j.b
-A.Q().$1("\u2705 Session established with user: "+A.h(c==null?null:c.z))
+A.P().$1("\u2705 Session established with user: "+A.h(c==null?null:c.z))
 s=15
 return A.k(d.gdj().zI(A.aZa(a1)),$async$ng)
 case 15:i=a3
 d=i.a
-A.Q().$1("\u2705 Password updated successfully for: "+A.h(d==null?null:d.z))
+A.P().$1("\u2705 Password updated successfully for: "+A.h(d==null?null:d.z))
 s=16
 return A.k(n.le(),$async$ng)
 case 16:s=1
@@ -105422,7 +105422,7 @@ break
 case 11:p=10
 a=o.pop()
 h=A.W(a)
-A.Q().$1("\u274c Failed to establish session: "+A.h(h))
+A.P().$1("\u274c Failed to establish session: "+A.h(h))
 if(B.c.n(J.c1(h),"expired")||B.c.n(J.c1(h),"invalid")){d=A.bI(u.M)
 throw A.e(d)}d=A.bI("Reset session invalid. Please request a new password reset link.")
 throw A.e(d)
@@ -105433,12 +105433,12 @@ break
 case 13:case 9:d=n.a
 s=d.gdj().c!=null?17:18
 break
-case 17:A.Q().$1("\ud83d\udd04 Updating password with active session...")
+case 17:A.P().$1("\ud83d\udd04 Updating password with active session...")
 s=19
 return A.k(d.gdj().zI(A.aZa(a1)),$async$ng)
 case 19:g=a3
 d=g.a
-A.Q().$1("\u2705 Password updated successfully for: "+A.h(d==null?null:d.z))
+A.P().$1("\u2705 Password updated successfully for: "+A.h(d==null?null:d.z))
 s=20
 return A.k(n.le(),$async$ng)
 case 20:s=1
@@ -105452,10 +105452,10 @@ case 4:p=3
 a0=o.pop()
 d=A.W(a0)
 if(d instanceof A.fY){f=d
-A.Q().$1("\u274c AuthException during password update: "+f.a)
+A.P().$1("\u274c AuthException during password update: "+f.a)
 if(B.c.n(f.a.toLowerCase(),"session")||B.c.n(f.a.toLowerCase(),"auth")||B.c.n(f.a.toLowerCase(),"expired")||B.c.n(f.a.toLowerCase(),"invalid"))throw A.e(A.bI("Reset session expired or invalid. Please request a new password reset link."))
 throw A.e(A.bI("Password update failed: "+n.wc(f.a)))}else{e=d
-A.Q().$1("\u274c General error during password update: "+A.h(e))
+A.P().$1("\u274c General error during password update: "+A.h(e))
 d=A.bI("Password update failed. Please try again.")
 throw A.e(d)}s=6
 break
@@ -105479,7 +105479,7 @@ case 5:s=6
 return A.k(q.I(0,"reset_timestamp"),$async$le)
 case 6:s=7
 return A.k(q.I(0,"recovery_detected_at"),$async$le)
-case 7:A.Q().$1("\ud83e\uddf9 Cleared all reset tokens")
+case 7:A.P().$1("\ud83e\uddf9 Cleared all reset tokens")
 return A.r(null,r)}})
 return A.t($async$le,r)},
 zq(a){return this.aHg(a)},
@@ -105487,10 +105487,10 @@ aHg(a){var s=0,r=A.u(t.y),q,p=2,o=[],n=this,m,l,k,j,i
 var $async$zq=A.p(function(b,c){if(b===1){o.push(c)
 s=p}while(true)switch(s){case 0:p=4
 k=B.c.bL(a)
-A.Q().$1("\ud83d\udd04 Resending verification email to: "+k)
+A.P().$1("\ud83d\udd04 Resending verification email to: "+k)
 s=7
 return A.k(n.a.gdj().Gm(k,"https://www.jrrgo.com/auth-callback.html",B.aeb),$async$zq)
-case 7:A.Q().$1("\u2705 Verification email resent to: "+k)
+case 7:A.P().$1("\u2705 Verification email resent to: "+k)
 q=!0
 s=1
 break
@@ -105501,10 +105501,10 @@ case 4:p=3
 i=o.pop()
 k=A.W(i)
 if(k instanceof A.fY){m=k
-A.Q().$1("\u274c AuthException during resend: "+m.a)
+A.P().$1("\u274c AuthException during resend: "+m.a)
 if(B.c.n(m.a.toLowerCase(),"rate limit"))throw A.e(A.bI("Please wait 60 seconds before requesting another verification email."))
 throw A.e(A.bI("Failed to resend verification email: "+n.wc(m.a)))}else{l=k
-A.Q().$1("\u274c General error during resend: "+A.h(l))
+A.P().$1("\u274c General error during resend: "+A.h(l))
 k=A.bI("Failed to resend verification email. Please try again.")
 throw A.e(k)}s=6
 break
@@ -105568,14 +105568,14 @@ s=q}while(true)switch(s){case 0:q=3
 m=t.N
 s=6
 return A.k(o.a.er("profiles").kS(0,A.a7(["id",c,"email",a,"full_name",b,"created_at",new A.b4(Date.now(),0,!1).hI(),"updated_at",new A.b4(Date.now(),0,!1).hI()],m,m)),$async$E_)
-case 6:A.Q().$1("\u2705 Profile created for: "+a)
+case 6:A.P().$1("\u2705 Profile created for: "+a)
 q=1
 s=5
 break
 case 3:q=2
 k=p.pop()
 n=A.W(k)
-A.Q().$1("\u26a0\ufe0f Profile creation warning: "+A.h(n))
+A.P().$1("\u26a0\ufe0f Profile creation warning: "+A.h(n))
 s=5
 break
 case 2:s=1
@@ -105600,15 +105600,15 @@ r=l==null?i.ik(g):l
 n=$.jg
 k=n==null?null:A.bQ(J.aj(n.a,f))
 q=k==null?i.ik(f):k
-A.Q().$1("\ud83d\udd10 Token validation check:")
-A.Q().$1("   - Token: "+(s!=null?"PRESENT":"null"))
-A.Q().$1("   - Type: "+A.h(r))
-A.Q().$1("   - Reset Required: "+A.h(q))
+A.P().$1("\ud83d\udd10 Token validation check:")
+A.P().$1("   - Token: "+(s!=null?"PRESENT":"null"))
+A.P().$1("   - Type: "+A.h(r))
+A.P().$1("   - Reset Required: "+A.h(q))
 p=J.d(q,"true")&&s!=null&&J.d(r,"recovery")
-if(p){A.Q().$1("\u2705 Valid recovery token found")
-i.t8()}else A.Q().$1("\u274c No valid recovery token found")
+if(p){A.P().$1("\u2705 Valid recovery token found")
+i.t8()}else A.P().$1("\u274c No valid recovery token found")
 return p}catch(j){o=A.W(j)
-A.Q().$1("\u274c Error checking password reset: "+A.h(o))
+A.P().$1("\u274c Error checking password reset: "+A.h(o))
 return!1}},
 ga36(){var s,r,q,p,o="auth_error_type"
 try{r=$.jg
@@ -105623,7 +105623,7 @@ s.io(r)
 s.io(q)
 s.kv(r)
 s.kv(q)
-A.Q().$1("\u2705 Verification flags cleared")},
+A.P().$1("\u2705 Verification flags cleared")},
 Mu(){var s=this,r="auth_error_type",q="auth_error_timestamp",p="auth_error_email"
 s.io(r)
 s.io(q)
@@ -105631,7 +105631,7 @@ s.io(p)
 s.kv(r)
 s.kv(q)
 s.kv(p)
-A.Q().$1("\u2705 Auth errors cleared")},
+A.P().$1("\u2705 Auth errors cleared")},
 xv(){var s=this,r="password_reset_required",q="supabase_recovery_token",p="supabase_recovery_type",o="reset_timestamp"
 s.io(r)
 s.io(q)
@@ -105641,12 +105641,12 @@ s.kv(r)
 s.kv(q)
 s.kv(p)
 s.kv(o)
-A.Q().$1("\u2705 Reset flags cleared")},
+A.P().$1("\u2705 Reset flags cleared")},
 oQ(){var s=0,r=A.u(t.y),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e
 var $async$oQ=A.p(function(a,b){if(a===1){o.push(b)
 s=p}while(true)switch(s){case 0:p=4
-A.Q().$1("\ud83c\udf10 Processing URL tokens...")
-if(n.gEZ()){A.Q().$1("\ud83c\udfaf Found stored recovery tokens")
+A.P().$1("\ud83c\udf10 Processing URL tokens...")
+if(n.gEZ()){A.P().$1("\ud83c\udfaf Found stored recovery tokens")
 q=!0
 s=1
 break}m=A.VS()
@@ -105656,14 +105656,14 @@ J.AL(l,m.gh1())
 if(m.ghZ().length!==0){k=A.aSy(m.ghZ())
 J.AL(l,k)}j=J.aj(l,"access_token")
 i=J.aj(l,"type")
-A.Q().$1("\ud83d\udce6 URL Parameters:")
-A.Q().$1("   - access_token: "+(j!=null?"PRESENT":"null"))
-A.Q().$1("   - type: "+A.h(i))
-A.Q().$1("   - full URL: "+A.h(m))
-A.Q().$1("   - fragment: "+m.ghZ())
+A.P().$1("\ud83d\udce6 URL Parameters:")
+A.P().$1("   - access_token: "+(j!=null?"PRESENT":"null"))
+A.P().$1("   - type: "+A.h(i))
+A.P().$1("   - full URL: "+A.h(m))
+A.P().$1("   - fragment: "+m.ghZ())
 s=j!=null&&J.d(i,"recovery")?7:8
 break
-case 7:A.Q().$1("\ud83c\udfaf Password recovery token detected in URL")
+case 7:A.P().$1("\ud83c\udfaf Password recovery token detected in URL")
 s=9
 return A.k(n.lj("password_reset_required","true"),$async$oQ)
 case 9:s=10
@@ -105676,7 +105676,7 @@ case 12:n.CD("password_reset_required","true")
 n.CD("supabase_recovery_token",j)
 n.CD("supabase_recovery_type","recovery")
 n.CD("reset_timestamp",new A.b4(Date.now(),0,!1).hI())
-A.Q().$1("\u2705 Recovery tokens stored successfully in both storage systems")
+A.P().$1("\u2705 Recovery tokens stored successfully in both storage systems")
 q=!0
 s=1
 break
@@ -105689,7 +105689,7 @@ break
 case 4:p=3
 e=o.pop()
 h=A.W(e)
-A.Q().$1("\u274c Error processing URL tokens: "+A.h(h))
+A.P().$1("\u274c Error processing URL tokens: "+A.h(h))
 q=!1
 s=1
 break
@@ -105708,21 +105708,21 @@ m=o.ik("supabase_recovery_type")
 l=o.ik("password_reset_required")
 s=n!=null&&m!=null&&l!=null?6:7
 break
-case 6:A.Q().$1("\ud83d\udd04 Syncing localStorage \u2192 SharedPreferences")
+case 6:A.P().$1("\ud83d\udd04 Syncing localStorage \u2192 SharedPreferences")
 s=8
 return A.k(o.lj("password_reset_required",l),$async$t8)
 case 8:s=9
 return A.k(o.lj("supabase_recovery_token",n),$async$t8)
 case 9:s=10
 return A.k(o.lj("supabase_recovery_type",m),$async$t8)
-case 10:A.Q().$1("\u2705 Sync completed")
+case 10:A.P().$1("\u2705 Sync completed")
 case 7:q=1
 s=5
 break
 case 3:q=2
 i=p.pop()
 k=A.W(i)
-A.Q().$1("\u274c Error syncing storage: "+A.h(k))
+A.P().$1("\u274c Error syncing storage: "+A.h(k))
 s=5
 break
 case 2:s=1
@@ -105736,7 +105736,7 @@ while(true)switch(s){case 0:try{n=p.gEZ()
 q=n
 s=1
 break}catch(l){o=A.W(l)
-A.Q().$1("\u274c Token validation error: "+A.h(o))
+A.P().$1("\u274c Token validation error: "+A.h(o))
 q=!1
 s=1
 break}case 1:return A.r(q,r)}})
@@ -105759,14 +105759,17 @@ s=2
 return A.k(t.Sg.b(q)?q:A.fE(q,t.X7),$async$io)
 case 2:return A.r(null,r)}})
 return A.t($async$io,r)},
-ik(a){var s
-try{return null}catch(s){return null}},
+ik(a){var s,r
+try{A.P().$1("\ud83d\udd04 Attempting to read from localStorage: "+a)
+return null}catch(r){s=A.W(r)
+A.P().$1("\u274c Error reading localStorage: "+A.h(s))
+return null}},
 CD(a,b){var s,r
-try{A.Q().$1("\ud83d\udd04 Setting localStorage: "+a+" = "+b)}catch(r){s=A.W(r)
-A.Q().$1("\u274c Error setting localStorage: "+A.h(s))}},
+try{A.P().$1("\ud83d\udd04 Setting localStorage: "+a+" = "+b)}catch(r){s=A.W(r)
+A.P().$1("\u274c Error setting localStorage: "+A.h(s))}},
 kv(a){var s,r
-try{A.Q().$1("\ud83d\udd04 Removing localStorage: "+a)}catch(r){s=A.W(r)
-A.Q().$1("\u274c Error removing localStorage: "+A.h(s))}}}
+try{A.P().$1("\ud83d\udd04 Removing localStorage: "+a)}catch(r){s=A.W(r)
+A.P().$1("\u274c Error removing localStorage: "+A.h(s))}}}
 A.kE.prototype={
 k(a,b){if(b==null)return!1
 return b instanceof A.kE&&this.b===b.b},
@@ -110672,7 +110675,7 @@ m(h=A.b3.prototype,"gDo","a2",77)
 m(h,"ga5y","M",77)
 o(h,"gd8","l",0)
 o(h,"gdm","ar",0)
-q(A,"Q",1,null,["$2$wrapWidth","$1"],["b0m",function(a){return A.b0m(a,null)}],687,0)
+q(A,"P",1,null,["$2$wrapWidth","$1"],["b0m",function(a){return A.b0m(a,null)}],687,0)
 p(A,"bhA","b_r",0)
 r(A,"bhM","bb9",688)
 n(h=A.D4.prototype,"gamI","amJ",500)
@@ -118154,38 +118157,38 @@ $.b8s=A.B(t.S,A.aK("b8r"))
 $.aXl=null
 $.aXj=null
 $.aXk=null})();(function lazyInitializers(){var s=hunkHelpers.lazyFinal,r=hunkHelpers.lazy
-s($,"bm8","mv",()=>A.P(A.P(A.aR(),"ClipOp"),"Intersect"))
+s($,"bm8","mv",()=>A.Q(A.Q(A.aR(),"ClipOp"),"Intersect"))
 s($,"bnf","b3V",()=>{var q="FontSlant"
-return A.b([A.P(A.P(A.aR(),q),"Upright"),A.P(A.P(A.aR(),q),"Italic")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Upright"),A.Q(A.Q(A.aR(),q),"Italic")],t.O)})
 s($,"bng","b3W",()=>{var q="FontWeight"
-return A.b([A.P(A.P(A.aR(),q),"Thin"),A.P(A.P(A.aR(),q),"ExtraLight"),A.P(A.P(A.aR(),q),"Light"),A.P(A.P(A.aR(),q),"Normal"),A.P(A.P(A.aR(),q),"Medium"),A.P(A.P(A.aR(),q),"SemiBold"),A.P(A.P(A.aR(),q),"Bold"),A.P(A.P(A.aR(),q),"ExtraBold"),A.P(A.P(A.aR(),q),"ExtraBlack")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Thin"),A.Q(A.Q(A.aR(),q),"ExtraLight"),A.Q(A.Q(A.aR(),q),"Light"),A.Q(A.Q(A.aR(),q),"Normal"),A.Q(A.Q(A.aR(),q),"Medium"),A.Q(A.Q(A.aR(),q),"SemiBold"),A.Q(A.Q(A.aR(),q),"Bold"),A.Q(A.Q(A.aR(),q),"ExtraBold"),A.Q(A.Q(A.aR(),q),"ExtraBlack")],t.O)})
 s($,"bnq","b44",()=>{var q="TextDirection"
-return A.b([A.P(A.P(A.aR(),q),"RTL"),A.P(A.P(A.aR(),q),"LTR")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"RTL"),A.Q(A.Q(A.aR(),q),"LTR")],t.O)})
 s($,"bnn","b42",()=>{var q="TextAlign"
-return A.b([A.P(A.P(A.aR(),q),"Left"),A.P(A.P(A.aR(),q),"Right"),A.P(A.P(A.aR(),q),"Center"),A.P(A.P(A.aR(),q),"Justify"),A.P(A.P(A.aR(),q),"Start"),A.P(A.P(A.aR(),q),"End")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Left"),A.Q(A.Q(A.aR(),q),"Right"),A.Q(A.Q(A.aR(),q),"Center"),A.Q(A.Q(A.aR(),q),"Justify"),A.Q(A.Q(A.aR(),q),"Start"),A.Q(A.Q(A.aR(),q),"End")],t.O)})
 s($,"bnr","b45",()=>{var q="TextHeightBehavior"
-return A.b([A.P(A.P(A.aR(),q),"All"),A.P(A.P(A.aR(),q),"DisableFirstAscent"),A.P(A.P(A.aR(),q),"DisableLastDescent"),A.P(A.P(A.aR(),q),"DisableAll")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"All"),A.Q(A.Q(A.aR(),q),"DisableFirstAscent"),A.Q(A.Q(A.aR(),q),"DisableLastDescent"),A.Q(A.Q(A.aR(),q),"DisableAll")],t.O)})
 s($,"bnj","b3Z",()=>{var q="RectHeightStyle"
-return A.b([A.P(A.P(A.aR(),q),"Tight"),A.P(A.P(A.aR(),q),"Max"),A.P(A.P(A.aR(),q),"IncludeLineSpacingMiddle"),A.P(A.P(A.aR(),q),"IncludeLineSpacingTop"),A.P(A.P(A.aR(),q),"IncludeLineSpacingBottom"),A.P(A.P(A.aR(),q),"Strut")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Tight"),A.Q(A.Q(A.aR(),q),"Max"),A.Q(A.Q(A.aR(),q),"IncludeLineSpacingMiddle"),A.Q(A.Q(A.aR(),q),"IncludeLineSpacingTop"),A.Q(A.Q(A.aR(),q),"IncludeLineSpacingBottom"),A.Q(A.Q(A.aR(),q),"Strut")],t.O)})
 s($,"bnk","b4_",()=>{var q="RectWidthStyle"
-return A.b([A.P(A.P(A.aR(),q),"Tight"),A.P(A.P(A.aR(),q),"Max")],t.O)})
-s($,"bnd","od",()=>A.b([A.P(A.P(A.aR(),"ClipOp"),"Difference"),A.P(A.P(A.aR(),"ClipOp"),"Intersect")],t.O))
+return A.b([A.Q(A.Q(A.aR(),q),"Tight"),A.Q(A.Q(A.aR(),q),"Max")],t.O)})
+s($,"bnd","od",()=>A.b([A.Q(A.Q(A.aR(),"ClipOp"),"Difference"),A.Q(A.Q(A.aR(),"ClipOp"),"Intersect")],t.O))
 s($,"bne","a6l",()=>{var q="FillType"
-return A.b([A.P(A.P(A.aR(),q),"Winding"),A.P(A.P(A.aR(),q),"EvenOdd")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Winding"),A.Q(A.Q(A.aR(),q),"EvenOdd")],t.O)})
 s($,"bnc","b3U",()=>{var q="BlurStyle"
-return A.b([A.P(A.P(A.aR(),q),"Normal"),A.P(A.P(A.aR(),q),"Solid"),A.P(A.P(A.aR(),q),"Outer"),A.P(A.P(A.aR(),q),"Inner")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Normal"),A.Q(A.Q(A.aR(),q),"Solid"),A.Q(A.Q(A.aR(),q),"Outer"),A.Q(A.Q(A.aR(),q),"Inner")],t.O)})
 s($,"bnl","b40",()=>{var q="StrokeCap"
-return A.b([A.P(A.P(A.aR(),q),"Butt"),A.P(A.P(A.aR(),q),"Round"),A.P(A.P(A.aR(),q),"Square")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Butt"),A.Q(A.Q(A.aR(),q),"Round"),A.Q(A.Q(A.aR(),q),"Square")],t.O)})
 s($,"bnh","b3X",()=>{var q="PaintStyle"
-return A.b([A.P(A.P(A.aR(),q),"Fill"),A.P(A.P(A.aR(),q),"Stroke")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Fill"),A.Q(A.Q(A.aR(),q),"Stroke")],t.O)})
 s($,"bnb","b3T",()=>{var q="BlendMode"
-return A.b([A.P(A.P(A.aR(),q),"Clear"),A.P(A.P(A.aR(),q),"Src"),A.P(A.P(A.aR(),q),"Dst"),A.P(A.P(A.aR(),q),"SrcOver"),A.P(A.P(A.aR(),q),"DstOver"),A.P(A.P(A.aR(),q),"SrcIn"),A.P(A.P(A.aR(),q),"DstIn"),A.P(A.P(A.aR(),q),"SrcOut"),A.P(A.P(A.aR(),q),"DstOut"),A.P(A.P(A.aR(),q),"SrcATop"),A.P(A.P(A.aR(),q),"DstATop"),A.P(A.P(A.aR(),q),"Xor"),A.P(A.P(A.aR(),q),"Plus"),A.P(A.P(A.aR(),q),"Modulate"),A.P(A.P(A.aR(),q),"Screen"),A.P(A.P(A.aR(),q),"Overlay"),A.P(A.P(A.aR(),q),"Darken"),A.P(A.P(A.aR(),q),"Lighten"),A.P(A.P(A.aR(),q),"ColorDodge"),A.P(A.P(A.aR(),q),"ColorBurn"),A.P(A.P(A.aR(),q),"HardLight"),A.P(A.P(A.aR(),q),"SoftLight"),A.P(A.P(A.aR(),q),"Difference"),A.P(A.P(A.aR(),q),"Exclusion"),A.P(A.P(A.aR(),q),"Multiply"),A.P(A.P(A.aR(),q),"Hue"),A.P(A.P(A.aR(),q),"Saturation"),A.P(A.P(A.aR(),q),"Color"),A.P(A.P(A.aR(),q),"Luminosity")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Clear"),A.Q(A.Q(A.aR(),q),"Src"),A.Q(A.Q(A.aR(),q),"Dst"),A.Q(A.Q(A.aR(),q),"SrcOver"),A.Q(A.Q(A.aR(),q),"DstOver"),A.Q(A.Q(A.aR(),q),"SrcIn"),A.Q(A.Q(A.aR(),q),"DstIn"),A.Q(A.Q(A.aR(),q),"SrcOut"),A.Q(A.Q(A.aR(),q),"DstOut"),A.Q(A.Q(A.aR(),q),"SrcATop"),A.Q(A.Q(A.aR(),q),"DstATop"),A.Q(A.Q(A.aR(),q),"Xor"),A.Q(A.Q(A.aR(),q),"Plus"),A.Q(A.Q(A.aR(),q),"Modulate"),A.Q(A.Q(A.aR(),q),"Screen"),A.Q(A.Q(A.aR(),q),"Overlay"),A.Q(A.Q(A.aR(),q),"Darken"),A.Q(A.Q(A.aR(),q),"Lighten"),A.Q(A.Q(A.aR(),q),"ColorDodge"),A.Q(A.Q(A.aR(),q),"ColorBurn"),A.Q(A.Q(A.aR(),q),"HardLight"),A.Q(A.Q(A.aR(),q),"SoftLight"),A.Q(A.Q(A.aR(),q),"Difference"),A.Q(A.Q(A.aR(),q),"Exclusion"),A.Q(A.Q(A.aR(),q),"Multiply"),A.Q(A.Q(A.aR(),q),"Hue"),A.Q(A.Q(A.aR(),q),"Saturation"),A.Q(A.Q(A.aR(),q),"Color"),A.Q(A.Q(A.aR(),q),"Luminosity")],t.O)})
 s($,"bnm","b41",()=>{var q="StrokeJoin"
-return A.b([A.P(A.P(A.aR(),q),"Miter"),A.P(A.P(A.aR(),q),"Round"),A.P(A.P(A.aR(),q),"Bevel")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Miter"),A.Q(A.Q(A.aR(),q),"Round"),A.Q(A.Q(A.aR(),q),"Bevel")],t.O)})
 s($,"bns","b46",()=>{var q="TileMode"
-return A.b([A.P(A.P(A.aR(),q),"Clamp"),A.P(A.P(A.aR(),q),"Repeat"),A.P(A.P(A.aR(),q),"Mirror"),A.P(A.P(A.aR(),q),"Decal")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Clamp"),A.Q(A.Q(A.aR(),q),"Repeat"),A.Q(A.Q(A.aR(),q),"Mirror"),A.Q(A.Q(A.aR(),q),"Decal")],t.O)})
 s($,"bmk","aUm",()=>{var q="FilterMode",p="MipmapMode",o="Linear"
-return A.a7([B.fW,{filter:A.P(A.P(A.aR(),q),"Nearest"),mipmap:A.P(A.P(A.aR(),p),"None")},B.Wh,{filter:A.P(A.P(A.aR(),q),o),mipmap:A.P(A.P(A.aR(),p),"None")},B.da,{filter:A.P(A.P(A.aR(),q),o),mipmap:A.P(A.P(A.aR(),p),o)},B.oU,{B:0.3333333333333333,C:0.3333333333333333}],A.aK("ry"),t.m)})
+return A.a7([B.fW,{filter:A.Q(A.Q(A.aR(),q),"Nearest"),mipmap:A.Q(A.Q(A.aR(),p),"None")},B.Wh,{filter:A.Q(A.Q(A.aR(),q),o),mipmap:A.Q(A.Q(A.aR(),p),"None")},B.da,{filter:A.Q(A.Q(A.aR(),q),o),mipmap:A.Q(A.Q(A.aR(),p),o)},B.oU,{B:0.3333333333333333,C:0.3333333333333333}],A.aK("ry"),t.m)})
 s($,"bmw","b3q",()=>{var q=A.aRU(2)
 q.$flags&2&&A.aU(q)
 q[0]=0
@@ -118193,44 +118196,44 @@ q[1]=1
 return q})
 s($,"bn9","aQk",()=>A.b0J(4))
 s($,"bnp","b43",()=>{var q="DecorationStyle"
-return A.b([A.P(A.P(A.aR(),q),"Solid"),A.P(A.P(A.aR(),q),"Double"),A.P(A.P(A.aR(),q),"Dotted"),A.P(A.P(A.aR(),q),"Dashed"),A.P(A.P(A.aR(),q),"Wavy")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Solid"),A.Q(A.Q(A.aR(),q),"Double"),A.Q(A.Q(A.aR(),q),"Dotted"),A.Q(A.Q(A.aR(),q),"Dashed"),A.Q(A.Q(A.aR(),q),"Wavy")],t.O)})
 s($,"bno","aUv",()=>{var q="TextBaseline"
-return A.b([A.P(A.P(A.aR(),q),"Alphabetic"),A.P(A.P(A.aR(),q),"Ideographic")],t.O)})
+return A.b([A.Q(A.Q(A.aR(),q),"Alphabetic"),A.Q(A.Q(A.aR(),q),"Ideographic")],t.O)})
 s($,"bni","b3Y",()=>{var q="PlaceholderAlignment"
-return A.b([A.P(A.P(A.aR(),q),"Baseline"),A.P(A.P(A.aR(),q),"AboveBaseline"),A.P(A.P(A.aR(),q),"BelowBaseline"),A.P(A.P(A.aR(),q),"Top"),A.P(A.P(A.aR(),q),"Bottom"),A.P(A.P(A.aR(),q),"Middle")],t.O)})
-s($,"bnU","b4h",()=>{var q=A.b_n(A.P(A.ke(),"document"),"createElementNS","http://www.w3.org/2000/svg","svg")
+return A.b([A.Q(A.Q(A.aR(),q),"Baseline"),A.Q(A.Q(A.aR(),q),"AboveBaseline"),A.Q(A.Q(A.aR(),q),"BelowBaseline"),A.Q(A.Q(A.aR(),q),"Top"),A.Q(A.Q(A.aR(),q),"Bottom"),A.Q(A.Q(A.aR(),q),"Middle")],t.O)})
+s($,"bnU","b4h",()=>{var q=A.b_n(A.Q(A.ke(),"document"),"createElementNS","http://www.w3.org/2000/svg","svg")
 A.aR9(q,"version","1.1")
 A.aR9(q,"width",0)
 A.aR9(q,"height",0)
-A.b6X(A.P(q,"style"),"absolute")
+A.b6X(A.Q(q,"style"),"absolute")
 return q})
 r($,"bn7","b3Q",()=>A.ev().ga2C()+"roboto/v32/KFOmCnqEu92Fr1Me4GZLCzYlKw.woff2")
 r($,"bml","aUn",()=>A.bdT(A.An(A.An(A.ke(),"window"),"FinalizationRegistry"),A.eu(new A.aOs())))
 r($,"bnW","aUG",()=>new A.akq())
 s($,"bmu","b3o",()=>A.b96(B.a48))
 s($,"bmt","aQh",()=>A.agJ(A.b5K($.b3o())))
-s($,"bm7","b3b",()=>A.aYr(A.P(A.aR(),"ParagraphBuilder")))
+s($,"bm7","b3b",()=>A.aYr(A.Q(A.aR(),"ParagraphBuilder")))
 s($,"bo3","b4k",()=>{var q=t.N,p=A.aK("+breaks,graphemes,words(yC,yC,yC)"),o=A.aRN(1e5,q,p),n=A.aRN(1e4,q,p)
 return new A.a1b(A.aRN(20,q,p),n,o)})
 s($,"bms","b3n",()=>A.a7([B.wO,A.b0j("grapheme"),B.wP,A.b0j("word")],A.aK("Dt"),t.m))
 s($,"bnx","b4a",()=>{var q="v8BreakIterator"
-if(A.P(A.P(A.ke(),"Intl"),q)==null)A.a8(A.e7("v8BreakIterator is not supported."))
+if(A.Q(A.Q(A.ke(),"Intl"),q)==null)A.a8(A.e7("v8BreakIterator is not supported."))
 return A.bdU(A.An(A.An(A.ke(),"Intl"),q),A.b8z([]),A.aXv(B.acv))})
-s($,"bj3","ea",()=>{var q,p=A.P(A.P(A.ke(),"window"),"screen")
-p=p==null?null:A.P(p,"width")
+s($,"bj3","ea",()=>{var q,p=A.Q(A.Q(A.ke(),"window"),"screen")
+p=p==null?null:A.Q(p,"width")
 if(p==null)p=0
-q=A.P(A.P(A.ke(),"window"),"screen")
-q=q==null?null:A.P(q,"height")
+q=A.Q(A.Q(A.ke(),"window"),"screen")
+q=q==null?null:A.Q(q,"height")
 return new A.PQ(A.baZ(p,q==null?0:q))})
 s($,"bj0","f2",()=>A.aXv(A.a7(["preventScroll",!0],t.N,t.y)))
-s($,"bnw","b49",()=>{var q=A.P(A.P(A.ke(),"window"),"trustedTypes")
+s($,"bnw","b49",()=>{var q=A.Q(A.Q(A.ke(),"window"),"trustedTypes")
 q.toString
 return A.b_n(q,"createPolicy","flutter-engine",{createScriptURL:A.eu(new A.aP3())})})
-r($,"bnC","aUx",()=>A.P(A.An(A.ke(),"window"),"FinalizationRegistry")!=null)
-r($,"bnE","aQm",()=>A.P(A.An(A.ke(),"window"),"OffscreenCanvas")!=null)
+r($,"bnC","aUx",()=>A.Q(A.An(A.ke(),"window"),"FinalizationRegistry")!=null)
+r($,"bnE","aQm",()=>A.Q(A.An(A.ke(),"window"),"OffscreenCanvas")!=null)
 s($,"bmm","b3j",()=>B.aW.cz(A.a7(["type","fontsChange"],t.N,t.z)))
 r($,"b7M","b1v",()=>A.wx())
-r($,"bjd","aQa",()=>new A.QA(A.b([],A.aK("H<~(N)>")),A.bdZ(A.P(A.ke(),"window"),"matchMedia","(forced-colors: active)")))
+r($,"bjd","aQa",()=>new A.QA(A.b([],A.aK("H<~(N)>")),A.bdZ(A.Q(A.ke(),"window"),"matchMedia","(forced-colors: active)")))
 s($,"bm5","b39",()=>A.b5T("ftyp"))
 s($,"bmz","aUp",()=>8589934852)
 s($,"bmA","b3s",()=>8589934853)
@@ -118261,7 +118264,7 @@ s($,"bkm","b27",()=>new A.anW())
 s($,"bkn","aU3",()=>new A.OF())
 s($,"bko","mu",()=>new A.azV(A.B(t.S,A.aK("zJ"))))
 s($,"bn6","av",()=>new A.Oq(A.b5s(),A.bbm(!1),new A.OB(),A.B(t.S,A.aK("yN"))))
-r($,"bnD","b4d",()=>{var q=A.P(A.An(A.ke(),"window"),"ImageDecoder")
+r($,"bnD","b4d",()=>{var q=A.Q(A.An(A.ke(),"window"),"ImageDecoder")
 q=(q==null?null:A.aWU(q))!=null&&$.bY().ged()===B.e3
 return q})
 s($,"bil","b1b",()=>{var q=t.N
@@ -118270,7 +118273,7 @@ s($,"bo4","AK",()=>new A.aeV())
 s($,"bnv","b48",()=>A.aRU(4))
 s($,"bnt","aUw",()=>A.aRU(16))
 s($,"bnu","b47",()=>A.b8N($.aUw()))
-r($,"bo0","f5",()=>A.b6Z(A.P(A.P(A.ke(),"window"),"console")))
+r($,"bo0","f5",()=>A.b6Z(A.Q(A.Q(A.ke(),"window"),"console")))
 r($,"biY","b1q",()=>{var q=$.ea(),p=A.bbc(null,null,!1,t.i)
 p=new A.Px(q,q.goc(0),p)
 p.Zb()
@@ -118745,7 +118748,7 @@ s($,"bit","b1d",()=>{var q=t.N
 q=A.B(q,q)
 q.m(0,"X-Client-Info","supabase-dart/2.10.0")
 return q})
-s($,"bmX","a6k",()=>A.P(A.P(A.ke(),"window"),"localStorage"))
+s($,"bmX","a6k",()=>A.Q(A.Q(A.ke(),"window"),"localStorage"))
 s($,"bmZ","aUu",()=>A.fK("supabase.supabase_flutter"))
 s($,"bkZ","f3",()=>new A.Gx())
 s($,"blf","aUa",()=>new A.R())
