@@ -40,27 +40,33 @@
       }
       
       // SCENARIO 1: Direct Supabase recovery link (user clicked email)
-      if (currentUrl.includes('type=recovery') && currentUrl.includes('access_token')) {
+      if (currentUrl.includes('type=recovery') && (currentUrl.includes('access_token') || currentUrl.includes('token='))) {
         console.log('🎯 SCENARIO 1: Direct Supabase recovery link detected');
         handleDirectSupabaseRecovery();
         return;
       }
       
-      // SCENARIO 2: Already stored tokens (from reset-password.html)
+      // SCENARIO 2: Already stored tokens (from previous sessions)
       if (localStorage.getItem('password_reset_required') === 'true') {
         console.log('🎯 SCENARIO 2: Stored reset tokens detected');
-        // Tokens already stored, let Flutter handle it
+        // Tokens already stored, let Flutter handle it - DON'T CLEAN URL HERE
         return;
       }
       
       // SCENARIO 3: URL parameters in main app
-      if (hash.includes('access_token') || search.includes('access_token')) {
+      if (hash.includes('access_token') || search.includes('access_token') || hash.includes('token=') || search.includes('token=')) {
         console.log('🎯 SCENARIO 3: URL parameters in main app');
         handleUrlParameters();
         return;
       }
       
       console.log('ℹ️ No special auth scenario detected');
+      
+      // Clean URL only if no special scenarios detected
+      if (search || hash) {
+        console.log('🧹 Cleaning URL - no auth scenarios detected');
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
     }
 
     // NEW: Handle authentication errors (expired tokens, etc.)
@@ -109,7 +115,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       
-      const token = urlParams.get('access_token') || hashParams.get('access_token');
+      const token = urlParams.get('access_token') || urlParams.get('token') || hashParams.get('access_token') || hashParams.get('token');
       const type = urlParams.get('type') || hashParams.get('type');
       
       console.log('🔐 Direct Supabase extraction:', {
@@ -129,8 +135,10 @@
         
         console.log('🔐 Tokens stored from direct Supabase link');
         
-        // Clean URL - remove all parameters
-        window.history.replaceState({}, document.title, window.location.pathname);
+        // DON'T clean URL here - let Flutter see the original URL first
+        console.log('⚠️ Keeping URL intact for Flutter detection');
+      } else {
+        console.log('❌ Invalid recovery token or type');
       }
     }
 
@@ -159,7 +167,7 @@
         }
       }
       
-      const token = params.get('access_token');
+      const token = params.get('access_token') || params.get('token');
       const type = params.get('type');
       
       if (token && type === 'recovery') {
@@ -170,8 +178,10 @@
         localStorage.setItem('supabase_recovery_type', 'recovery');
         localStorage.setItem('reset_timestamp', new Date().toISOString());
         
-        // Clean URL
-        window.history.replaceState({}, document.title, window.location.pathname);
+        // DON'T clean URL here - let Flutter see the original URL first
+        console.log('⚠️ Keeping URL intact for Flutter detection');
+      } else {
+        console.log('❌ Invalid recovery token or type from URL parameters');
       }
     }
 
