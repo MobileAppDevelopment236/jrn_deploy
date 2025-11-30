@@ -19,118 +19,91 @@
   <link rel="manifest" href="manifest.json">
 
   <script>
-  // MethodChannel implementation for localStorage access
+  // Single, unified token handler
+  function handleAuthTokens() {
+    try {
+      const url = new URL(window.location.href);
+      console.log('🌐 Initial URL:', url.href);
+      
+      // Check query parameters first (for redirect flags)
+      const queryParams = url.searchParams;
+      const resetInitiated = queryParams.get('reset_initiated');
+      const authError = queryParams.get('auth_error');
+      
+      // Check fragment parameters (for direct tokens)
+      const hashParams = new URLSearchParams(url.hash.substring(1));
+      const token = hashParams.get('access_token');
+      const type = hashParams.get('type');
+      
+      console.log('🔐 Token Detection:', { 
+        hasQueryFlag: resetInitiated === 'true',
+        hasDirectToken: !!token,
+        type: type
+      });
+      
+      // Handle redirect flags from auth-callback
+      if (resetInitiated === 'true') {
+        console.log('🔄 Reset flow initiated via redirect');
+        // Don't process here - let Flutter handle stored tokens
+        // Just clean the URL but preserve other query params if any
+        const cleanUrl = window.location.pathname + (window.location.search.includes('auth_error') ? window.location.search : '');
+        window.history.replaceState({}, document.title, cleanUrl);
+        return;
+      }
+      
+      // Handle direct token URLs (should be rare)
+      if (token && type === 'recovery') {
+        console.log('🎯 Direct recovery token detected in index.html');
+        
+        localStorage.setItem('password_reset_required', 'true');
+        localStorage.setItem('supabase_recovery_token', token);
+        localStorage.setItem('supabase_recovery_type', 'recovery');
+        localStorage.setItem('reset_timestamp', new Date().toISOString());
+        
+        console.log('✅ Tokens stored in localStorage');
+        
+        // Clean URL completely
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+      
+      // Clean any remaining token fragments
+      if (url.hash.includes('access_token') || url.hash.includes('type=recovery')) {
+        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
+        console.log('🧹 Token fragments cleaned');
+      }
+      
+    } catch (error) {
+      console.log('🔐 Token processing completed with error:', error);
+    }
+  }
+
+  // Initialize Flutter channel for localStorage access
   window.addEventListener('load', function() {
     if (window.flutter_inappwebview != null) {
-      // For webview
       window.flutter_inappwebview.callHandler = function(method, ...args) {
-        if (method === 'getItem') {
-          return localStorage.getItem(args[0]);
-        } else if (method === 'setItem') {
-          localStorage.setItem(args[0].key, args[0].value);
-        } else if (method === 'removeItem') {
-          localStorage.removeItem(args[0]);
-        }
+        if (method === 'getItem') return localStorage.getItem(args[0]);
+        if (method === 'setItem') localStorage.setItem(args[0].key, args[0].value);
+        if (method === 'removeItem') localStorage.removeItem(args[0]);
       };
     } else {
-      // For regular web
       window.flutterChannel = {
-        getItem: function(key) {
-          return localStorage.getItem(key);
-        },
-        setItem: function(key, value) {
-          localStorage.setItem(key, value);
-        },
-        removeItem: function(key) {
-          localStorage.removeItem(key);
-        }
+        getItem: (key) => localStorage.getItem(key),
+        setItem: (key, value) => localStorage.setItem(key, value),
+        removeItem: (key) => localStorage.removeItem(key)
       };
     }
   });
 
-  // Your existing token handling code...
-  function handleURLParameters() {
-    try {
-      const url = new URL(window.location.href);
-      const hashParams = new URLSearchParams(url.hash.substring(1));
-      
-      const token = hashParams.get('access_token');
-      const type = hashParams.get('type');
-      
-      console.log('🔐 URL Token Detection:', { 
-        hasToken: !!token, 
-        type: type
-      });
-      
-      if (token && type === 'recovery') {
-        console.log('🎯 Password reset token detected - storing in localStorage');
-        localStorage.setItem('password_reset_required', 'true');
-        localStorage.setItem('supabase_recovery_token', token);
-        localStorage.setItem('supabase_recovery_type', 'recovery');
-        localStorage.setItem('reset_timestamp', new Date().toISOString());
-        
-        console.log('✅ Tokens stored in localStorage');
-      }
-      
-      // Clean URL but DON'T remove from localStorage
-      if (url.hash.includes('access_token') || url.hash.includes('type=recovery')) {
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-        console.log('🧹 URL parameters cleaned');
-      }
-    } catch (error) {
-      console.log('URL processing completed');
-    }
-  }
-
-  document.addEventListener('DOMContentLoaded', handleURLParameters);
-</script>
-  
-  <script>
-  function handleURLParameters() {
-    try {
-      const url = new URL(window.location.href);
-      const hashParams = new URLSearchParams(url.hash.substring(1));
-      
-      const token = hashParams.get('access_token');
-      const type = hashParams.get('type');
-      
-      console.log('🔐 URL Token Detection:', { 
-        hasToken: !!token, 
-        type: type
-      });
-      
-      if (token && type === 'recovery') {
-        console.log('🎯 Password reset token detected');
-        
-        // Store in localStorage (Flutter will check this via SharedPreferences)
-        localStorage.setItem('password_reset_required', 'true');
-        localStorage.setItem('supabase_recovery_token', token);
-        localStorage.setItem('supabase_recovery_type', 'recovery');
-        localStorage.setItem('reset_timestamp', new Date().toISOString());
-        
-        console.log('✅ Tokens stored in localStorage');
-      }
-      
-      // Clean URL parameters
-      if (url.hash.includes('access_token') || url.hash.includes('type=recovery')) {
-        window.history.replaceState({}, document.title, window.location.pathname);
-        console.log('🧹 URL parameters cleaned');
-      }
-    } catch (error) {
-      console.log('URL processing completed');
-    }
-  }
-
-  // Wait for Flutter to be ready before processing
+  // Run token handler when Flutter is ready
   window.addEventListener('flutter-first-frame', function() {
-    setTimeout(handleURLParameters, 100);
+    setTimeout(handleAuthTokens, 100);
   });
 
   // Also run on DOM content loaded as fallback
   document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(handleURLParameters, 500);
+    setTimeout(handleAuthTokens, 500);
   });
-</script>
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
