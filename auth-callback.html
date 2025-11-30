@@ -21,11 +21,18 @@
                 tokenLength: token ? token.length : 0
             });
             
-            // Validate token format (should be JWT)
+            // More lenient validation for PKCE tokens
             if (token && type === 'recovery') {
-                // Check if token looks like a JWT (contains dots)
-                if (token.includes('.') && token.split('.').length === 3) {
-                    console.log('✅ Valid JWT token detected');
+                console.log('🔐 Token analysis:', {
+                    length: token.length,
+                    hasDots: token.includes('.'),
+                    hasUnderscores: token.includes('_'),
+                    startsWith: token.substring(0, 10)
+                });
+                
+                // Accept various token formats - Supabase might use different formats
+                if (token.length > 20 && (token.includes('.') || token.includes('_'))) {
+                    console.log('✅ Valid token format detected');
                     
                     // Store tokens in localStorage
                     localStorage.setItem('password_reset_required', 'true');
@@ -35,10 +42,10 @@
                     
                     console.log('✅ Password reset tokens stored in localStorage');
                     
-                    // ✅ FIX: Redirect with flag to signal Flutter app
+                    // Redirect with flag to signal Flutter app
                     window.location.href = 'https://www.jrrgo.com/?reset_initiated=true&source=auth_callback';
                 } else {
-                    console.error('❌ INVALID TOKEN FORMAT - Not a JWT:', token);
+                    console.error('❌ INVALID TOKEN FORMAT - Not a valid auth token:', token);
                     // Redirect with error flag
                     window.location.href = 'https://www.jrrgo.com/?auth_error=invalid_token';
                 }
