@@ -3,15 +3,18 @@
 <head>
     <title>Authentication Callback - JRR Immigration</title>
     <script>
-        // Enhanced auth callback handler - EMAIL VERIFICATION ONLY
+        // ENHANCED: Handle ALL authentication callbacks including password recovery
         function handleAuthCallback() {
             const urlParams = new URLSearchParams(window.location.search);
-            const access_token = urlParams.get('access_token');
-            const refresh_token = urlParams.get('refresh_token');
-            const token = urlParams.get('token');
-            const type = urlParams.get('type');
-            const error = urlParams.get('error');
-            const error_description = urlParams.get('error_description');
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            
+            // Get parameters from both URL search and hash
+            const access_token = urlParams.get('access_token') || hashParams.get('access_token');
+            const refresh_token = urlParams.get('refresh_token') || hashParams.get('refresh_token');
+            const token = urlParams.get('token') || hashParams.get('token');
+            const type = urlParams.get('type') || hashParams.get('type');
+            const error = urlParams.get('error') || hashParams.get('error');
+            const error_description = urlParams.get('error_description') || hashParams.get('error_description');
             
             console.log('🔐 Auth callback parameters:', { 
                 type, 
@@ -20,75 +23,134 @@
                 has_token: !!token 
             });
 
-            // Handle errors
+            // Update UI to show processing
+            document.getElementById('status').className = 'status processing';
+            document.getElementById('status').innerHTML = `
+                <div class="spinner"></div>
+                <p>Processing authentication...</p>
+            `;
+
+            // SCENARIO 1: Handle errors
             if (error) {
                 console.error('❌ Auth error:', error, error_description);
-                // Store error for Flutter to handle
-                if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('auth_error', error);
-                    if (error_description) {
-                        localStorage.setItem('auth_error_description', error_description);
-                    }
-                }
-                
-                // Redirect to main app - Flutter will handle the error
-                setTimeout(() => {
-                    const appUrl = `https://www.jrrgo.com/`;
-                    console.log('🔄 Redirecting to main app with error:', appUrl);
-                    window.location.href = appUrl;
-                }, 1000);
+                handleAuthError(error, error_description);
                 return;
             }
 
-            // Handle EMAIL VERIFICATION (signup)
+            // SCENARIO 2: Handle PASSWORD RECOVERY (MOST IMPORTANT)
+            if (type === 'recovery' && (access_token || token)) {
+                console.log('✅ Password recovery callback detected');
+                handlePasswordRecovery(access_token || token);
+                return;
+            }
+
+            // SCENARIO 3: Handle EMAIL VERIFICATION (signup)
             if (type === 'signup' && (access_token || token)) {
                 console.log('✅ Email verification successful');
-                
-                // Store verification success for Flutter
-                if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('email_verification_success', 'true');
-                    localStorage.setItem('verification_timestamp', new Date().toISOString());
-                    
-                    // Store tokens if available
-                    if (access_token) {
-                        localStorage.setItem('supabase_auth_token', access_token);
-                    }
-                    if (refresh_token) {
-                        localStorage.setItem('supabase_refresh_token', refresh_token);
-                    }
-                }
-
-                // Show success message
-                document.getElementById('status').className = 'status success';
-                document.getElementById('status').innerHTML = `
-                    <h3>Email Verified!</h3>
-                    <p>Your email has been verified successfully. Redirecting to app...</p>
-                `;
-
-                // Redirect to main app
-                setTimeout(() => {
-                    const appUrl = `https://www.jrrgo.com/`;
-                    console.log('🔄 Redirecting to main app after verification:', appUrl);
-                    window.location.href = appUrl;
-                }, 2000);
+                handleEmailVerification(access_token, refresh_token);
                 return;
             }
 
-            // Handle other auth types or fallback
+            // SCENARIO 4: Handle other cases or fallback
             console.log('ℹ️ General auth callback, redirecting to main app');
             setTimeout(() => {
-                const appUrl = `https://www.jrrgo.com/`;
-                window.location.href = appUrl;
+                window.location.href = 'https://www.jrrgo.com/';
             }, 1000);
         }
 
-        function getAppBaseUrl() {
-            return 'https://www.jrrgo.com/';
+        function handlePasswordRecovery(token) {
+            console.log('🔄 Processing password recovery...');
+            
+            // Store recovery tokens in multiple locations for redundancy
+            localStorage.setItem('password_reset_required', 'true');
+            localStorage.setItem('supabase_recovery_token', token);
+            localStorage.setItem('supabase_recovery_type', 'recovery');
+            localStorage.setItem('reset_timestamp', new Date().toISOString());
+            
+            // CRITICAL: Also store in sessionStorage for immediate detection
+            sessionStorage.setItem('immediate_password_reset', 'true');
+            sessionStorage.setItem('immediate_recovery_token', token);
+            sessionStorage.setItem('immediate_reset_timestamp', new Date().toISOString());
+            
+            console.log('🔐 Recovery tokens stored successfully');
+            
+            // Update UI
+            document.getElementById('status').className = 'status success';
+            document.getElementById('status').innerHTML = `
+                <h3>Password Reset Ready!</h3>
+                <p>Redirecting to set your new password...</p>
+            `;
+
+            // Redirect to main app - Flutter will detect the reset tokens
+            setTimeout(() => {
+                console.log('🔄 Redirecting to main app for password reset...');
+                window.location.href = 'https://www.jrrgo.com/';
+            }, 1500);
+        }
+
+        function handleEmailVerification(access_token, refresh_token) {
+            console.log('🔄 Processing email verification...');
+            
+            // Store verification success
+            localStorage.setItem('email_verification_success', 'true');
+            localStorage.setItem('verification_timestamp', new Date().toISOString());
+            
+            // Store tokens if available
+            if (access_token) {
+                localStorage.setItem('supabase_auth_token', access_token);
+            }
+            if (refresh_token) {
+                localStorage.setItem('supabase_refresh_token', refresh_token);
+            }
+
+            // Update UI
+            document.getElementById('status').className = 'status success';
+            document.getElementById('status').innerHTML = `
+                <h3>Email Verified!</h3>
+                <p>Your email has been verified successfully. Redirecting to app...</p>
+            `;
+
+            // Redirect to main app
+            setTimeout(() => {
+                console.log('🔄 Redirecting to main app after verification...');
+                window.location.href = 'https://www.jrrgo.com/';
+            }, 2000);
+        }
+
+        function handleAuthError(error, error_description) {
+            console.error('❌ Handling auth error:', error);
+            
+            // Store error information
+            localStorage.setItem('auth_error', error);
+            if (error_description) {
+                localStorage.setItem('auth_error_description', error_description);
+            }
+            
+            // Store specific error types
+            if (error === 'otp_expired') {
+                localStorage.setItem('auth_error_type', 'otp_expired');
+                localStorage.setItem('auth_error_timestamp', new Date().toISOString());
+            }
+
+            // Update UI
+            document.getElementById('status').className = 'status error';
+            document.getElementById('status').innerHTML = `
+                <h3>Authentication Error</h3>
+                <p>${error_description || error}</p>
+                <p>Redirecting to app...</p>
+            `;
+
+            // Redirect to main app - Flutter will handle the error
+            setTimeout(() => {
+                console.log('🔄 Redirecting to main app with error...');
+                window.location.href = 'https://www.jrrgo.com/';
+            }, 2000);
         }
 
         // Start processing when page loads
         document.addEventListener('DOMContentLoaded', handleAuthCallback);
     </script>
+    
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -132,6 +194,11 @@
             border-radius: 8px;
             margin: 1rem 0;
         }
+        .processing {
+            background: #DBEAFE;
+            color: #1E40AF;
+            border: 1px solid #BFDBFE;
+        }
         .success {
             background: #D1FAE5;
             color: #065F46;
@@ -141,11 +208,6 @@
             background: #FEE2E2;
             color: #991B1B;
             border: 1px solid #FECACA;
-        }
-        .loading {
-            background: #DBEAFE;
-            color: #1E40AF;
-            border: 1px solid #BFDBFE;
         }
         .spinner {
             border: 3px solid #f3f3f3;
@@ -164,9 +226,9 @@
 </head>
 <body>
     <div class="container">
-        <div class="logo">✉️</div>
+        <div class="logo">🔐</div>
         <h1>Authentication</h1>
-        <div id="status" class="status loading">
+        <div id="status" class="status processing">
             <div class="spinner"></div>
             <p>Processing authentication...</p>
         </div>
