@@ -61,40 +61,50 @@
 
         // In auth-callback.html - UPDATE the handlePasswordRecovery function:
 
+// REPLACE the handlePasswordRecovery function in auth-callback.html:
+// REPLACE the handlePasswordRecovery function in auth-callback.html:
+
 function handlePasswordRecovery(token) {
     console.log('🔄 Processing password recovery...');
     
-    // Store recovery tokens in a way that Flutter can read
-    // Use both localStorage and a special method for Flutter SharedPreferences
+    // CRITICAL: Store in multiple locations for redundancy
+    
+    // 1. Store in regular localStorage (for JavaScript detection)
     localStorage.setItem('password_reset_required', 'true');
     localStorage.setItem('supabase_recovery_token', token);
     localStorage.setItem('supabase_recovery_type', 'recovery');
     localStorage.setItem('reset_timestamp', new Date().toISOString());
     
-    // CRITICAL: Also store in a way that Flutter's WebAuthHandler can detect
-    // Use sessionStorage for immediate detection
+    // 2. Store in sessionStorage for immediate detection
     sessionStorage.setItem('immediate_password_reset', 'true');
     sessionStorage.setItem('immediate_recovery_token', token);
     sessionStorage.setItem('immediate_reset_timestamp', new Date().toISOString());
     
-    console.log('🔐 Recovery tokens stored successfully');
+    // 3. Store additional flags for better detection
+    localStorage.setItem('recovery_detected_at', new Date().toISOString());
+    localStorage.setItem('callback_processed', 'true');
+    
+    console.log('🔐 Recovery tokens stored in multiple locations');
     console.log('📦 Stored tokens debug:');
     console.log('   - password_reset_required:', localStorage.getItem('password_reset_required'));
     console.log('   - has_token:', !!localStorage.getItem('supabase_recovery_token'));
+    console.log('   - token_type:', localStorage.getItem('supabase_recovery_type'));
     console.log('   - immediate_reset:', sessionStorage.getItem('immediate_password_reset'));
+    console.log('   - recovery_detected_at:', localStorage.getItem('recovery_detected_at'));
     
     // Update UI
     document.getElementById('status').className = 'status success';
     document.getElementById('status').innerHTML = `
         <h3>Password Reset Ready!</h3>
+        <p>All tokens have been stored successfully.</p>
         <p>Redirecting to set your new password...</p>
     `;
 
-    // Redirect to main app - Flutter will detect the reset tokens
+    // Redirect to main app
     setTimeout(() => {
         console.log('🔄 Redirecting to main app for password reset...');
         window.location.href = 'https://www.jrrgo.com/';
-    }, 1500);
+    }, 2000);
 }
 
         function handleEmailVerification(access_token, refresh_token) {
