@@ -19,8 +19,8 @@
   <title>JRR Immigration</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- ULTIMATE FIX: Handle ALL Supabase auth scenarios including errors -->
-  <script>
+  <!-- UPDATED JavaScript in index.html -->
+<script>
     // Comprehensive auth handler for ALL scenarios
     function handleAllAuthScenarios() {
       const currentUrl = window.location.href;
@@ -53,10 +53,10 @@
         return;
       }
       
-      // SCENARIO 3: URL parameters in main app
-      if (hash.includes('access_token') || search.includes('access_token') || hash.includes('token=') || search.includes('token=')) {
-        console.log('🎯 SCENARIO 3: URL parameters in main app');
-        handleUrlParameters();
+      // SCENARIO 3: URL parameters in main app (PASSWORD RESET)
+      if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+        console.log('🎯 SCENARIO 3: Recovery parameters in main app');
+        handleRecoveryParameters();
         return;
       }
       
@@ -69,7 +69,7 @@
       }
     }
 
-    // NEW: Handle authentication errors (expired tokens, etc.)
+    // Handle authentication errors (expired tokens, etc.)
     function handleAuthErrors() {
       console.log('🔄 Processing auth errors...');
       
@@ -133,6 +133,11 @@
         localStorage.setItem('reset_timestamp', new Date().toISOString());
         localStorage.setItem('direct_supabase_link', 'true');
         
+        // CRITICAL: Also store in sessionStorage for immediate detection
+        sessionStorage.setItem('immediate_password_reset', 'true');
+        sessionStorage.setItem('immediate_recovery_token', token);
+        sessionStorage.setItem('immediate_reset_timestamp', new Date().toISOString());
+        
         console.log('🔐 Tokens stored from direct Supabase link');
         
         // DON'T clean URL here - let Flutter see the original URL first
@@ -142,8 +147,9 @@
       }
     }
 
-    function handleUrlParameters() {
-      console.log('🔄 Processing URL parameters...');
+    // NEW: Handle recovery parameters in main app
+    function handleRecoveryParameters() {
+      console.log('🔄 Processing recovery parameters in main app...');
       
       const hash = window.location.hash;
       const search = window.location.search;
@@ -171,17 +177,24 @@
       const type = params.get('type');
       
       if (token && type === 'recovery') {
-        console.log('✅ Valid recovery token from URL parameters');
+        console.log('✅ Valid recovery token from main app parameters');
         
         localStorage.setItem('password_reset_required', 'true');
         localStorage.setItem('supabase_recovery_token', token);
         localStorage.setItem('supabase_recovery_type', 'recovery');
         localStorage.setItem('reset_timestamp', new Date().toISOString());
         
+        // CRITICAL: Also store in sessionStorage for immediate detection
+        sessionStorage.setItem('immediate_password_reset', 'true');
+        sessionStorage.setItem('immediate_recovery_token', token);
+        sessionStorage.setItem('immediate_reset_timestamp', new Date().toISOString());
+        
+        console.log('🔐 Recovery tokens stored in main app');
+        
         // DON'T clean URL here - let Flutter see the original URL first
         console.log('⚠️ Keeping URL intact for Flutter detection');
       } else {
-        console.log('❌ Invalid recovery token or type from URL parameters');
+        console.log('❌ Invalid recovery token or type from main app parameters');
       }
     }
 
@@ -194,6 +207,7 @@
       console.log('   - direct_link:', localStorage.getItem('direct_supabase_link'));
       console.log('   - auth_error_type:', localStorage.getItem('auth_error_type'));
       console.log('   - auth_error_email:', localStorage.getItem('auth_error_email'));
+      console.log('   - session_immediate_reset:', sessionStorage.getItem('immediate_password_reset'));
     }
     
     // Initialize when page loads
@@ -202,7 +216,7 @@
       handleAllAuthScenarios();
       debugStoredTokens();
     });
-  </script>
+</script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
