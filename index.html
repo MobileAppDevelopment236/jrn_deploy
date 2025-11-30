@@ -18,70 +18,16 @@
   <title>JRR Immigration</title>
   <link rel="manifest" href="manifest.json">
   
-  <!-- SIMPLIFIED JavaScript - SINGLE APPROACH -->
+  <!-- SIMPLE JavaScript - NO MEMORY LEAKS -->
   <script>
-    function processAuthParameters() {
-      console.log('🔄 Processing URL parameters...');
-      
-      try {
-        const url = new URL(window.location.href);
-        const params = new URLSearchParams(url.hash.substring(1));
-        
-        const token = params.get('access_token') || params.get('token');
-        const type = params.get('type');
-        const error = params.get('error');
-        
-        console.log('📋 URL Parameters:', { token: token ? '***' + token.slice(-8) : null, type, error });
-
-        // SCENARIO 1: Handle errors
-        if (error) {
-          console.log('❌ Auth error detected:', error);
-          localStorage.setItem('auth_error_type', error);
-          localStorage.setItem('auth_error_timestamp', new Date().toISOString());
-          
-          // Clean URL immediately
-          window.history.replaceState({}, document.title, window.location.pathname);
-          return;
-        }
-
-        // SCENARIO 2: Handle password recovery
-        if (token && type === 'recovery') {
-          console.log('🔐 Password recovery detected');
-          
-          // Store in localStorage for Flutter
-          localStorage.setItem('password_reset_required', 'true');
-          localStorage.setItem('supabase_recovery_token', token);
-          localStorage.setItem('supabase_recovery_type', 'recovery');
-          localStorage.setItem('reset_timestamp', new Date().toISOString());
-          
-          console.log('✅ Recovery tokens stored');
-          
-          // Clean URL after storing tokens
-          window.history.replaceState({}, document.title, window.location.pathname);
-          return;
-        }
-
-        // SCENARIO 3: Clean other parameters
-        if (url.hash || url.search) {
-          console.log('🧹 Cleaning URL parameters');
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-
-      } catch (error) {
-        console.error('❌ Error processing URL:', error);
+    // Minimal URL processing - just clean the URL
+    function cleanURL() {
+      if (window.location.hash || window.location.search) {
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
 
-    // Initialize when page loads
-    document.addEventListener('DOMContentLoaded', function() {
-      console.log('🚀 Starting JRR Immigration App');
-      processAuthParameters();
-    });
-
-    // Add error handling for Flutter bootstrap
-    window.addEventListener('error', function(e) {
-      console.error('🚨 Global error:', e.error);
-    });
+    document.addEventListener('DOMContentLoaded', cleanURL);
   </script>
 </head>
 <body>
