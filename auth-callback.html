@@ -7,62 +7,57 @@
         try {
             const url = new URL(window.location.href);
             console.log('🔐 Full URL:', url.href);
-            console.log('🔐 URL Fragment:', url.hash);
             
-            // Extract parameters from fragment (#access_token=...)
-            const fragment = url.hash.substring(1); // Remove the '#'
+            // Extract from fragment (hash)
+            const fragment = url.hash.substring(1);
             const params = new URLSearchParams(fragment);
             
             const token = params.get('access_token');
             const type = params.get('type');
             
             console.log('🔐 Auth Callback Processing:', { 
-                token: !!token, 
+                token: token ? 'PRESENT' : 'null', 
                 type: type,
-                fullFragment: fragment
+                tokenLength: token ? token.length : 0
             });
             
+            // Validate token format (should be JWT)
             if (token && type === 'recovery') {
-                console.log('🎯 Password reset token detected');
-                
-                // Store in localStorage
-                localStorage.setItem('password_reset_required', 'true');
-                localStorage.setItem('supabase_recovery_token', token);
-                localStorage.setItem('supabase_recovery_type', type);
-                localStorage.setItem('reset_timestamp', new Date().toISOString());
-                
-                console.log('✅ Password reset tokens stored in localStorage');
-                console.log('📦 Stored values:');
-                console.log('   - password_reset_required:', localStorage.getItem('password_reset_required'));
-                console.log('   - supabase_recovery_token:', localStorage.getItem('supabase_recovery_token') ? 'PRESENT' : 'null');
-                console.log('   - supabase_recovery_type:', localStorage.getItem('supabase_recovery_type'));
-                
-                // ✅ FIX: REDIRECT WITH TOKENS IN QUERY PARAMETERS
-                const redirectUrl = `https://www.jrrgo.com/?access_token=${token}&type=${type}`;
-                console.log('🔄 Redirecting with tokens:', redirectUrl);
-                window.location.href = redirectUrl;
-                return; // Important: stop execution here
+                // Check if token looks like a JWT (contains dots)
+                if (token.includes('.') && token.split('.').length === 3) {
+                    console.log('✅ Valid JWT token detected');
+                    
+                    // Store tokens
+                    localStorage.setItem('password_reset_required', 'true');
+                    localStorage.setItem('supabase_recovery_token', token);
+                    localStorage.setItem('supabase_recovery_type', type);
+                    localStorage.setItem('reset_timestamp', new Date().toISOString());
+                    
+                    console.log('✅ Password reset tokens stored');
+                    
+                    // Redirect to main app
+                    window.location.href = 'https://www.jrrgo.com/';
+                } else {
+                    console.error('❌ INVALID TOKEN FORMAT - Not a JWT:', token);
+                    alert('Invalid reset link. Please request a new password reset email.');
+                    window.location.href = 'https://www.jrrgo.com/#/forgot-password';
+                }
             } else {
-                console.log('❌ No valid token found in URL');
-                console.log('   - Token:', token);
-                console.log('   - Type:', type);
+                console.log('❌ No valid token found');
+                window.location.href = 'https://www.jrrgo.com/';
             }
             
         } catch (error) {
             console.error('❌ Auth callback error:', error);
+            window.location.href = 'https://www.jrrgo.com/';
         }
-        
-        // Fallback redirect without tokens
-        console.log('🔄 Redirecting to main app (no tokens)...');
-        window.location.href = 'https://www.jrrgo.com/';
     }
     
-    // Run immediately when page loads
-    console.log('🚀 Auth callback page loaded');
-    processAuthCallback();
-</script>
+    // Run on page load
+    document.addEventListener('DOMContentLoaded', processAuthCallback);
+    </script>
 </head>
 <body>
-    <p>Processing authentication... Redirecting to app.</p>
+    <p>Processing authentication... Please wait.</p>
 </body>
 </html>
