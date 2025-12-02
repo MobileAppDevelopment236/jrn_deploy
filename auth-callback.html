@@ -1,102 +1,133 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Authentication Callback - JRR Immigration</title>
-    <script>
-        function processAuthCallback() {
-            console.log('🔄 Processing auth callback...');
-            
-            try {
-                const url = new URL(window.location.href);
-                const fragment = url.hash.substring(1);
-                const params = new URLSearchParams(fragment);
-                
-                // Get token (OTP uses 'token', PKCE uses 'access_token')
-                const token = params.get('token') || params.get('access_token');
-                const type = params.get('type');
-                const error = params.get('error');
-                
-                console.log('📦 Extracted:', { token, type, error });
-                
-                if (error) {
-                    console.error('❌ Auth error:', error);
-                    localStorage.setItem('auth_error', error);
-                    redirectToApp('?auth_error=' + encodeURIComponent(error));
-                    return;
-                }
-                
-                if (!token || !type) {
-                    console.error('❌ Missing token or type');
-                    localStorage.setItem('auth_error', 'missing_params');
-                    redirectToApp('?auth_error=missing_params');
-                    return;
-                }
-                
-                if (type !== 'recovery') {
-                    console.error('❌ Not recovery flow:', type);
-                    redirectToApp('?auth_error=invalid_flow');
-                    return;
-                }
-                
-                // Store for Flutter app
-                localStorage.setItem('password_reset_required', 'true');
-                localStorage.setItem('supabase_recovery_token', token);
-                localStorage.setItem('supabase_recovery_type', type);
-                localStorage.setItem('reset_timestamp', new Date().toISOString());
-                
-                // Check if token is OTP (6-digit) or PKCE
-                if (token.startsWith('pkce_')) {
-                    localStorage.setItem('token_type', 'pkce');
-                } else if (token.length === 6) {
-                    localStorage.setItem('token_type', 'otp');
-                }
-                
-                console.log('✅ Tokens stored successfully');
-                redirectToApp('?reset_initiated=true');
-                
-            } catch (error) {
-                console.error('💥 Error:', error);
-                redirectToApp('?auth_error=processing_error');
-            }
+  <title>Password Reset - JRR Immigration</title>
+  <script>
+    console.log("🔐 Auth Callback Loaded:", window.location.href);
+
+    function extractToken() {
+      const hash = window.location.hash.substring(1);
+      console.log("📦 Raw Hash:", hash);
+
+      // CASE 1: JSON format (#{"type":"recovery","access_token":"xxx"})
+      if (hash.startsWith("{")) {
+        try {
+          const json = JSON.parse(hash);
+          console.log("📄 Parsed JSON token:", json);
+          return {
+            accessToken: json.access_token || "",
+            token: json.token || "",
+            type: json.type || "",
+            email: json.email || ""
+          };
+        } catch (e) {
+          console.log("⚠️ JSON parse failed:", e);
+        }
+      }
+
+      // CASE 2: Normal hash format (#token=xxx&type=recovery&email=...)
+      const params = new URLSearchParams(hash);
+      const parsed = {
+        accessToken: params.get("access_token") || "",
+        token: params.get("token") || "",
+        type: params.get("type") || "",
+        email: params.get("email") || ""
+      };
+
+      console.log("🔍 Parsed Params:", parsed);
+      return parsed;
+    }
+
+    function storeRecovery({ email, token, type }) {
+      try {
+        console.log("💾 Storing Recovery Data in localStorage & sessionStorage…");
+
+        localStorage.setItem("supabase_recovery_email", email || "");
+        localStorage.setItem("supabase_recovery_token", token || "");
+        localStorage.setItem("supabase_recovery_type", type || "");
+        localStorage.setItem("password_reset_required", "true");
+
+        // sessionStorage backup (helps short-lived navigation/race conditions)
+        try {
+          sessionStorage.setItem("supabase_recovery_email_backup", email || "");
+          sessionStorage.setItem("supabase_recovery_token_backup", token || "");
+          sessionStorage.setItem("password_reset_required_backup", "true");
+        } catch (e) {
+          console.log("ℹ️ sessionStorage not available:", e);
         }
 
-        function redirectToApp(queryParams) {
-            const baseUrl = 'https://www.jrrgo.com/';
-            const redirectUrl = baseUrl + (queryParams || '');
-            
-            console.log('🔄 Redirecting to:', redirectUrl);
-            
-            // Clean URL
-            window.history.replaceState({}, '', '/auth-callback.html');
-            
-            setTimeout(() => {
-                window.location.replace(redirectUrl);
-            }, 300);
-        }
+        console.log("✅ Stored:", { email, token, type });
+      } catch (e) {
+        console.error("❌ Error storing recovery data:", e);
+      }
+    }
 
-        // Start on page load
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', processAuthCallback);
-        } else {
-            processAuthCallback();
-        }
-    </script>
+    function safeRedirect(email) {
+      // Build redirect URL with fallback email query param to ensure Flutter can read it.
+      // Keeps existing reset_initiated flag for your app logic while adding email as fallback.
+      const base = "https://www.jrrgo.com/";
+      const params = new URLSearchParams();
+      params.set("reset_initiated", "true");
+      if (email) params.set("recovery_email", email);
+
+      // Clean address bar before redirect (remove sensitive fragment)
+      try {
+        window.history.replaceState({}, document.title, "/auth-callback.html");
+      } catch (e) {
+        console.log("ℹ️ history.replaceState failed:", e);
+      }
+
+      const redirectUrl = base + "?" + params.toString();
+      console.log("🔄 Redirecting to:", redirectUrl);
+
+      // short delay to ensure storage writes complete on some browsers
+      setTimeout(() => {
+        window.location.replace(redirectUrl);
+      }, 250);
+    }
+
+    function init() {
+      const extracted = extractToken();
+      console.log("📦 Final Extracted:", extracted);
+
+      // Support both accessToken (JWT) and token (OTP)
+      const realToken = extracted.accessToken || extracted.token || "";
+
+      // Validate token
+      if (!realToken || realToken.length < 3) { // allow short OTP (3+ digits)
+        console.error("❌ No valid recovery token detected!");
+        // redirect but include email if available as best-effort
+        safeRedirect(extracted.email || "");
+        return;
+      }
+
+      // Validate flow type
+      if (!extracted.type || extracted.type !== "recovery") {
+        console.error("❌ Not a recovery flow!");
+        safeRedirect(extracted.email || "");
+        return;
+      }
+
+      // Validate email
+      if (!extracted.email || extracted.email.length < 3) {
+        console.warn("⚠️ No email in fragment — will still store token and redirect with no-email fallback.");
+        // store token with empty email (we still store OTP so user can re-supply email in-app if needed)
+        storeRecovery({ email: "", token: realToken, type: extracted.type });
+        safeRedirect("");
+        return;
+      }
+
+      // Store the validated data and redirect (email also included in redirect query string)
+      storeRecovery({ email: extracted.email, token: realToken, type: extracted.type });
+      safeRedirect(extracted.email);
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
 </head>
-<body>
-    <div style="text-align: center; padding: 50px; font-family: Arial;">
-        <h1 style="color: #0D97CE;">Processing Reset Link...</h1>
-        <p>Please wait while we set up your password reset.</p>
-        <div style="margin: 30px;">
-            <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0D97CE; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        </div>
-    </div>
-    
-    <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        body { margin: 0; padding: 0; background: #f5f5f5; }
-    </style>
+
+<body style="font-family: Arial; text-align:center; padding:40px;">
+  <h1 style="color:#0D97CE;">Processing Password Reset…</h1>
+  <p>Please wait while we prepare your reset session.</p>
 </body>
 </html>
