@@ -3,16 +3,40 @@
 <head>
   <title>Password Reset - JRR Immigration</title>
   <script>
-    console.log("🔐 Auth callback loaded");
-    console.log("📍 URL:", window.location.href);
+    console.log("🔐 Auth Callback Loaded:", window.location.href);
 
-    function getParams() {
+    function extractToken() {
       const hash = window.location.hash.substring(1);
-      return new URLSearchParams(hash);
+      console.log("📦 Raw Hash:", hash);
+
+      // Try JSON format first (#{"type":"recovery","access_token":"xxx"})
+      if (hash.startsWith("{")) {
+        try {
+          const json = JSON.parse(hash);
+          console.log("📄 Parsed JSON token:", json);
+          return {
+            accessToken: json.access_token || json.token || "",
+            type: json.type || "",
+            email: json.email || ""
+          };
+        } catch (e) {
+          console.log("⚠️ JSON parse failed:", e);
+        }
+      }
+
+      // Normal hash format
+      const params = new URLSearchParams(hash);
+      console.log("🔍 Parsed Params:", Object.fromEntries(params.entries()));
+
+      return {
+        accessToken: params.get("access_token") || params.get("token") || "",
+        type: params.get("type") || "",
+        email: params.get("email") || ""
+      };
     }
 
-    function storeRecoveryData({ email, accessToken, type }) {
-      console.log("💾 Storing recovery data…");
+    function storeRecovery({ email, accessToken, type }) {
+      console.log("💾 Storing Recovery Data…");
 
       localStorage.setItem("supabase_recovery_email", email);
       localStorage.setItem("supabase_recovery_token", accessToken);
@@ -22,46 +46,42 @@
       console.log("✅ Stored:", { email, accessToken, type });
     }
 
-    function redirectToApp() {
-      console.log("🔄 Redirecting back to app…");
-
-      // Clean URL (remove sensitive data)
-      window.history.replaceState({}, document.title, "/auth-callback.html");
-
+    function redirectBack() {
+      console.log("🔄 Redirecting back to app");
+      window.history.replaceState({}, "", "/auth-callback.html");
       setTimeout(() => {
         window.location.replace("https://www.jrrgo.com/?reset_initiated=true");
-      }, 300);
+      }, 200);
     }
 
     function init() {
-      const params = getParams();
+      const data = extractToken();
 
-      const accessToken = params.get("access_token");
-      const type = params.get("type");
-      const email = params.get("email");
+      console.log("📦 Final Extracted:", data);
 
-      console.log("📦 Extracted:", { accessToken, type, email });
-
-      if (!accessToken || !email || type !== "recovery") {
-        console.error("❌ Missing required recovery params");
-        redirectToApp();
+      if (!data.accessToken || data.accessToken.length < 5) {
+        console.error("❌ No valid access token detected!");
+        redirectBack();
         return;
       }
 
-      storeRecoveryData({
-        email,
-        accessToken,
-        type
-      });
+      if (!data.type || data.type !== "recovery") {
+        console.error("❌ Not a recovery flow!");
+        redirectBack();
+        return;
+      }
 
-      redirectToApp();
+      storeRecovery(data);
+      redirectBack();
     }
 
     document.addEventListener("DOMContentLoaded", init);
   </script>
 </head>
+
 <body style="font-family: Arial; text-align:center; padding:40px;">
   <h1 style="color:#0D97CE;">Processing Password Reset…</h1>
-  <p>Please wait while we prepare your password reset session.</p>
+  <p>Please wait while we prepare your reset session.</p>
 </body>
+
 </html>
