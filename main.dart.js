@@ -105931,10 +105931,10 @@ var $async$pW=A.p(function(a,b){if(a===1){p.push(b)
 s=q}while(true)switch(s){case 0:q=3
 A.F().$1("\ud83d\udd04 Syncing LOCAL \u2192 SharedPreferences")
 n=$.W6
-m=o.kv("sp_sync_supabase_recovery_token")
-l=o.kv("sp_sync_supabase_recovery_type")
-k=o.kv("sp_sync_password_reset_required")
-j=o.kv("sp_sync_token_type")
+m=o.kv("supabase_recovery_token")
+l=o.kv("supabase_recovery_type")
+k=o.kv("password_reset_required")
+j=o.kv("token_type")
 s=m!=null&&l!=null&&J.d(k,"true")?6:8
 break
 case 6:h=n
@@ -105959,10 +105959,10 @@ s=14
 return A.k(f.b(h)?h:A.eB(h,g),$async$pW)
 case 14:case 13:A.F().$1("\u2705 SYNC COMPLETE \u2192 Flutter SharedPreferences")
 h=v.G
-h.window.localStorage.removeItem("sp_sync_supabase_recovery_token")
-h.window.localStorage.removeItem("sp_sync_supabase_recovery_type")
-h.window.localStorage.removeItem("sp_sync_password_reset_required")
-h.window.localStorage.removeItem("sp_sync_token_type")
+h.window.localStorage.removeItem("supabase_recovery_token")
+h.window.localStorage.removeItem("supabase_recovery_type")
+h.window.localStorage.removeItem("password_reset_required")
+h.window.localStorage.removeItem("token_type")
 s=7
 break
 case 8:A.F().$1("\u26a0\ufe0f No sync data found")
