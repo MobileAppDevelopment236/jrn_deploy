@@ -1,129 +1,117 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Password Reset - JRR Immigration</title>
+  <title>Password Reset - JRR GO</title>
+
   <script>
-    console.log("🔐 Auth Callback Loaded:", window.location.href);
+  console.log("🔐 Auth Callback Loaded:", window.location.href);
 
-    function extractToken() {
-      const hash = window.location.hash.substring(1);
-      console.log("📦 Raw Hash:", hash);
+  function extractToken() {
+    const hash = window.location.hash.substring(1);
+    console.log("📦 Raw Hash:", hash);
 
-      // CASE 1: JSON format (#{"type":"recovery","access_token":"xxx"})
-      if (hash.startsWith("{")) {
-        try {
-          const json = JSON.parse(hash);
-          console.log("📄 Parsed JSON token:", json);
-          return {
-            accessToken: json.access_token || "",
-            token: json.token || "",
-            type: json.type || "",
-            email: json.email || ""
-          };
-        } catch (e) {
-          console.log("⚠️ JSON parse failed:", e);
-        }
-      }
-
-      // CASE 2: Normal hash format (#token=xxx&type=recovery&email=...)
-      const params = new URLSearchParams(hash);
-      const parsed = {
-        accessToken: params.get("access_token") || "",
-        token: params.get("token") || "",
-        type: params.get("type") || "",
-        email: params.get("email") || ""
-      };
-
-      console.log("🔍 Parsed Params:", parsed);
-      return parsed;
-    }
-
-    function storeRecovery({ email, token, type }) {
+    if (hash.startsWith("{")) {
       try {
-        console.log("💾 Storing Recovery Data in localStorage & sessionStorage…");
-
-        localStorage.setItem("supabase_recovery_email", email || "");
-        localStorage.setItem("supabase_recovery_token", token || "");
-        localStorage.setItem("supabase_recovery_type", type || "");
-        localStorage.setItem("password_reset_required", "true");
-
-        // sessionStorage backup (helps short-lived navigation/race conditions)
-        try {
-          sessionStorage.setItem("supabase_recovery_email_backup", email || "");
-          sessionStorage.setItem("supabase_recovery_token_backup", token || "");
-          sessionStorage.setItem("password_reset_required_backup", "true");
-        } catch (e) {
-          console.log("ℹ️ sessionStorage not available:", e);
-        }
-
-        console.log("✅ Stored:", { email, token, type });
+        const json = JSON.parse(hash);
+        console.log("📄 Parsed JSON token:", json);
+        return {
+          token: json.access_token || json.token || "",
+          type: json.type || "",
+          email: json.email || ""
+        };
       } catch (e) {
-        console.error("❌ Error storing recovery data:", e);
+        console.log("⚠️ JSON parse failed:", e);
       }
     }
 
-    function safeRedirect(email) {
-      // Build redirect URL with fallback email query param to ensure Flutter can read it.
-      // Keeps existing reset_initiated flag for your app logic while adding email as fallback.
-      const base = "https://www.jrrgo.com/";
-      const params = new URLSearchParams();
-      params.set("reset_initiated", "true");
-      if (email) params.set("recovery_email", email);
+    const params = new URLSearchParams(hash);
+    const data = {
+      token: params.get("token") ||
+             params.get("access_token") || "",
+      type: params.get("type") || "",
+      email: params.get("email") || ""
+    };
 
-      // Clean address bar before redirect (remove sensitive fragment)
-      try {
-        window.history.replaceState({}, document.title, "/auth-callback.html");
-      } catch (e) {
-        console.log("ℹ️ history.replaceState failed:", e);
-      }
+    console.log("🔍 Parsed Params:", data);
+    return data;
+  }
 
-      const redirectUrl = base + "?" + params.toString();
-      console.log("🔄 Redirecting to:", redirectUrl);
+  function storeRecovery({ email, token, type }) {
+    console.log("💾 Storing Recovery Data…");
 
-      // short delay to ensure storage writes complete on some browsers
-      setTimeout(() => {
-        window.location.replace(redirectUrl);
-      }, 250);
+    localStorage.setItem("supabase_recovery_email", email || "");
+    localStorage.setItem("supabase_recovery_token", token || "");
+    localStorage.setItem("supabase_recovery_type", type || "");
+    localStorage.setItem("password_reset_required", "true");
+
+    try {
+      sessionStorage.setItem("supabase_recovery_email_backup", email || "");
+      sessionStorage.setItem("supabase_recovery_token_backup", token || "");
+    } catch (e) {
+      console.log("ℹ️ sessionStorage backup failed:", e);
     }
 
-    function init() {
-      const extracted = extractToken();
-      console.log("📦 Final Extracted:", extracted);
+    console.log("✅ Stored:", { email, token, type });
+  }
 
-      // Support both accessToken (JWT) and token (OTP)
-      const realToken = extracted.accessToken || extracted.token || "";
+  function redirectBack(email) {
+    console.log("🔄 Redirecting back to app");
 
-      // Validate token
-      if (!realToken || realToken.length < 3) { // allow short OTP (3+ digits)
-        console.error("❌ No valid recovery token detected!");
-        // redirect but include email if available as best-effort
-        safeRedirect(extracted.email || "");
-        return;
-      }
+    const base = "https://www.jrrgo.com/";
+    const params = new URLSearchParams();
 
-      // Validate flow type
-      if (!extracted.type || extracted.type !== "recovery") {
-        console.error("❌ Not a recovery flow!");
-        safeRedirect(extracted.email || "");
-        return;
-      }
+    params.set("reset_initiated", "true");
+    if (email) params.set("recovery_email", email);
 
-      // Validate email
-      if (!extracted.email || extracted.email.length < 3) {
-        console.warn("⚠️ No email in fragment — will still store token and redirect with no-email fallback.");
-        // store token with empty email (we still store OTP so user can re-supply email in-app if needed)
-        storeRecovery({ email: "", token: realToken, type: extracted.type });
-        safeRedirect("");
-        return;
-      }
+    try {
+      window.history.replaceState({}, "", "/auth-callback.html");
+    } catch (e) {}
 
-      // Store the validated data and redirect (email also included in redirect query string)
-      storeRecovery({ email: extracted.email, token: realToken, type: extracted.type });
-      safeRedirect(extracted.email);
+    const redirectUrl = base + "?" + params.toString();
+    console.log("➡️ Redirect URL:", redirectUrl);
+
+    setTimeout(() => {
+      window.location.replace(redirectUrl);
+    }, 200);
+  }
+
+  function init() {
+    const extracted = extractToken();
+    console.log("📦 Final Extracted:", extracted);
+
+    const token = extracted.token || "";
+
+    if (!token || token.length < 3) {
+      console.error("❌ Invalid token received");
+      redirectBack(extracted.email || "");
+      return;
     }
 
-    document.addEventListener("DOMContentLoaded", init);
+    if (extracted.type !== "recovery") {
+      console.error("❌ Not a recovery flow");
+      redirectBack(extracted.email || "");
+      return;
+    }
+
+    if (!extracted.email || extracted.email.length < 3) {
+      console.warn("⚠️ Email missing in URL");
+      storeRecovery({ email: "", token: token, type: extracted.type });
+      redirectBack("");
+      return;
+    }
+
+    storeRecovery({
+      email: extracted.email,
+      token: token,
+      type: extracted.type
+    });
+
+    redirectBack(extracted.email);
+  }
+
+  document.addEventListener("DOMContentLoaded", init);
   </script>
+
 </head>
 
 <body style="font-family: Arial; text-align:center; padding:40px;">
