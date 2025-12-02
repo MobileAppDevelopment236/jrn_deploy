@@ -9,13 +9,15 @@
       const hash = window.location.hash.substring(1);
       console.log("📦 Raw Hash:", hash);
 
-      // Try JSON format first (#{"type":"recovery","access_token":"xxx"})
+      // --- CASE 1: JSON Format (#{"type":"recovery","access_token":"xxx"}) ---
       if (hash.startsWith("{")) {
         try {
           const json = JSON.parse(hash);
           console.log("📄 Parsed JSON token:", json);
+
           return {
-            accessToken: json.access_token || json.token || "",
+            accessToken: json.access_token || "",
+            token: json.token || "",
             type: json.type || "",
             email: json.email || ""
           };
@@ -24,54 +26,76 @@
         }
       }
 
-      // Normal hash format
+      // --- CASE 2: Normal hash format (#token=xxx&type=recovery&email=...) ---
       const params = new URLSearchParams(hash);
-      console.log("🔍 Parsed Params:", Object.fromEntries(params.entries()));
-
-      return {
-        accessToken: params.get("access_token") || params.get("token") || "",
+      const parsed = {
+        accessToken: params.get("access_token") || "",
+        token: params.get("token") || "",
         type: params.get("type") || "",
         email: params.get("email") || ""
       };
+
+      console.log("🔍 Parsed Params:", parsed);
+      return parsed;
     }
 
-    function storeRecovery({ email, accessToken, type }) {
+    function storeRecovery({ email, token, type }) {
       console.log("💾 Storing Recovery Data…");
 
       localStorage.setItem("supabase_recovery_email", email);
-      localStorage.setItem("supabase_recovery_token", accessToken);
+      localStorage.setItem("supabase_recovery_token", token);
       localStorage.setItem("supabase_recovery_type", type);
       localStorage.setItem("password_reset_required", "true");
 
-      console.log("✅ Stored:", { email, accessToken, type });
+      console.log("✅ Stored:", { email, token, type });
     }
 
     function redirectBack() {
       console.log("🔄 Redirecting back to app");
+
+      // Clean URL (remove sensitive data)
       window.history.replaceState({}, "", "/auth-callback.html");
+
       setTimeout(() => {
         window.location.replace("https://www.jrrgo.com/?reset_initiated=true");
       }, 200);
     }
 
     function init() {
-      const data = extractToken();
+      const extracted = extractToken();
+      console.log("📦 Final Extracted:", extracted);
 
-      console.log("📦 Final Extracted:", data);
+      // NEW: Support both accessToken (JWT) and token (OTP)
+      const realToken = extracted.accessToken || extracted.token;
 
-      if (!data.accessToken || data.accessToken.length < 5) {
-        console.error("❌ No valid access token detected!");
+      // Validate token
+      if (!realToken || realToken.length < 4) {
+        console.error("❌ No valid recovery token detected!");
         redirectBack();
         return;
       }
 
-      if (!data.type || data.type !== "recovery") {
+      // Validate flow type
+      if (!extracted.type || extracted.type !== "recovery") {
         console.error("❌ Not a recovery flow!");
         redirectBack();
         return;
       }
 
-      storeRecovery(data);
+      // Validate email
+      if (!extracted.email || extracted.email.length < 3) {
+        console.error("❌ Missing email in reset callback!");
+        redirectBack();
+        return;
+      }
+
+      // Store final validated data
+      storeRecovery({
+        email: extracted.email,
+        token: realToken,
+        type: extracted.type
+      });
+
       redirectBack();
     }
 
