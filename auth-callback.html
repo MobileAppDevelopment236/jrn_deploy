@@ -1,219 +1,67 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Authentication Callback - JRR Immigration</title>
-    <script>
-        // OTP Auth Callback Processor - Simplified for OTP flow
-        function processAuthCallback() {
-            console.log('🔄 Starting authentication callback processing...');
-            
-            try {
-                const url = new URL(window.location.href);
-                console.log('🔐 Full URL:', url.href);
-                
-                // Parse fragment parameters (URL after #)
-                const fragment = url.hash.substring(1);
-                console.log('🔍 Fragment:', fragment);
-                
-                const params = new URLSearchParams(fragment);
-                
-                // Extract OTP parameters
-                const token = params.get('token'); // OTP token
-                const type = params.get('type');
-                const error = params.get('error');
-                const errorDescription = params.get('error_description');
-                
-                console.log('📦 Extracted Parameters:', { 
-                    token: token ? `OTP (${token.length} chars)` : 'null',
-                    type: type,
-                    error: error,
-                    error_description: errorDescription
-                });
-                
-                // Handle authentication errors first
-                if (error) {
-                    console.error('❌ Authentication error detected:', error, errorDescription);
-                    handleAuthError(error, errorDescription);
-                    return;
-                }
-                
-                // Process recovery flow (password reset)
-                if (type === 'recovery') {
-                    console.log('🎯 Processing recovery flow...');
-                    processRecoveryFlow(token);
-                    return;
-                }
-                
-                // Handle other flow types
-                console.log('ℹ️ Unknown or unsupported flow type:', type);
-                redirectToApp('?auth_error=unsupported_flow');
-                
-            } catch (error) {
-                console.error('💥 Unhandled exception in auth callback:', error);
-                handleAuthError('callback_error', error.toString());
-            }
-        }
+  <title>Password Reset - JRR Immigration</title>
+  <script>
+    console.log("🔐 Auth callback loaded");
+    console.log("📍 URL:", window.location.href);
 
-        function processRecoveryFlow(token) {
-            try {
-                // OTP LOGIC - token is required
-                if (token) {
-                    console.log('🎯 Using OTP recovery token:', {
-                        length: token.length,
-                        tokenPreview: token.length > 20 ? token.substring(0, 20) + '...' : token
-                    });
-                    
-                    // Store OTP token
-                    storeRecoveryTokens({
-                        token: token,
-                        type: 'recovery',
-                        tokenType: 'otp'
-                    });
-                    
-                    console.log('✅ Recovery tokens stored successfully');
-                    redirectToApp('?reset_initiated=true&source=auth_callback');
-                    
-                } else {
-                    console.error('❌ No valid recovery tokens found');
-                    handleAuthError('missing_tokens', 'No token parameter found');
-                    return;
-                }
-                
-            } catch (error) {
-                console.error('❌ Error in recovery flow processing:', error);
-                handleAuthError('recovery_processing_error', error.toString());
-            }
-        }
+    function getParams() {
+      const hash = window.location.hash.substring(1);
+      return new URLSearchParams(hash);
+    }
 
-        function storeRecoveryTokens(tokenData) {
-            const timestamp = new Date().toISOString();
-            
-            // Store in localStorage (primary for web)
-            localStorage.setItem('password_reset_required', 'true');
-            localStorage.setItem('supabase_recovery_token', tokenData.token);
-            localStorage.setItem('supabase_recovery_type', tokenData.type);
-            localStorage.setItem('reset_timestamp', timestamp);
-            localStorage.setItem('token_type', tokenData.tokenType);
-            
-            console.log('💾 Tokens stored in localStorage:', {
-                password_reset_required: 'true',
-                supabase_recovery_token: `${tokenData.token.substring(0, 15)}...`,
-                supabase_recovery_type: tokenData.type,
-                token_type: tokenData.tokenType,
-                timestamp: timestamp
-            });
-            
-            // Also store in sessionStorage as backup
-            try {
-                sessionStorage.setItem('recovery_flow_active', 'true');
-                sessionStorage.setItem('recovery_token_backup', tokenData.token);
-            } catch (e) {
-                console.log('ℹ️ Session storage not available:', e);
-            }
-        }
+    function storeRecoveryData({ email, accessToken, type }) {
+      console.log("💾 Storing recovery data…");
 
-        function handleAuthError(errorType, errorDescription = '') {
-            console.error('🚨 Handling auth error:', errorType, errorDescription);
-            
-            // Store error information for the main app to handle
-            localStorage.setItem('auth_error_type', errorType);
-            if (errorDescription) {
-                localStorage.setItem('auth_error_description', errorDescription);
-            }
-            localStorage.setItem('auth_error_timestamp', new Date().toISOString());
-            
-            // Redirect to main app with error parameters
-            let redirectParams = `?auth_error=${encodeURIComponent(errorType)}`;
-            if (errorDescription) {
-                redirectParams += `&error_description=${encodeURIComponent(errorDescription)}`;
-            }
-            
-            redirectToApp(redirectParams);
-        }
+      localStorage.setItem("supabase_recovery_email", email);
+      localStorage.setItem("supabase_recovery_token", accessToken);
+      localStorage.setItem("supabase_recovery_type", type);
+      localStorage.setItem("password_reset_required", "true");
 
-        function redirectToApp(queryParams = '') {
-            const baseUrl = 'https://www.jrrgo.com/';
-            const redirectUrl = baseUrl + queryParams;
-            
-            console.log('🔄 Redirecting to:', redirectUrl);
-            
-            // Clear sensitive data from URL
-            cleanupUrl();
-            
-            // Use replace to avoid back button issues
-            setTimeout(() => {
-                window.location.replace(redirectUrl);
-            }, 300);
-        }
+      console.log("✅ Stored:", { email, accessToken, type });
+    }
 
-        function cleanupUrl() {
-            try {
-                // Clear any sensitive data from URL after processing
-                window.history.replaceState({}, document.title, window.location.pathname);
-                console.log('🧹 Sensitive URL parameters cleared from address bar');
-            } catch (error) {
-                console.log('ℹ️ URL cleanup not possible:', error);
-            }
-        }
+    function redirectToApp() {
+      console.log("🔄 Redirecting back to app…");
 
-        function initializeAuthCallback() {
-            console.log('🚀 Initializing authentication callback...');
-            
-            // Small delay to ensure DOM is ready
-            setTimeout(() => {
-                try {
-                    processAuthCallback();
-                } catch (error) {
-                    console.error('💥 Failed to process auth callback:', error);
-                    redirectToApp('?auth_error=initialization_failed');
-                }
-            }, 100);
-        }
+      // Clean URL (remove sensitive data)
+      window.history.replaceState({}, document.title, "/auth-callback.html");
 
-        // Event listener for DOM ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeAuthCallback);
-        } else {
-            initializeAuthCallback();
-        }
+      setTimeout(() => {
+        window.location.replace("https://www.jrrgo.com/?reset_initiated=true");
+      }, 300);
+    }
 
-        // Global error handler
-        window.addEventListener('error', function(event) {
-            console.error('💥 Global error caught:', event.error);
-            redirectToApp('?auth_error=global_error');
-        });
+    function init() {
+      const params = getParams();
 
-        // Log startup information
-        console.log('🔐 Auth Callback Handler Loaded');
-        console.log('📍 Current URL:', window.location.href);
-        console.log('🕒 Load Time:', new Date().toISOString());
+      const accessToken = params.get("access_token");
+      const type = params.get("type");
+      const email = params.get("email");
 
-    </script>
+      console.log("📦 Extracted:", { accessToken, type, email });
+
+      if (!accessToken || !email || type !== "recovery") {
+        console.error("❌ Missing required recovery params");
+        redirectToApp();
+        return;
+      }
+
+      storeRecoveryData({
+        email,
+        accessToken,
+        type
+      });
+
+      redirectToApp();
+    }
+
+    document.addEventListener("DOMContentLoaded", init);
+  </script>
 </head>
-<body>
-    <div style="font-family: Arial, sans-serif; text-align: center; padding: 50px; color: #333;">
-        <h1 style="color: #0D97CE;">Processing Authentication...</h1>
-        <p>Please wait while we complete your authentication.</p>
-        <div style="margin: 30px 0;">
-            <div style="display: inline-block; width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid #0D97CE; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-        </div>
-        <p style="font-size: 14px; color: #666;">
-            If this takes more than a few seconds, <a href="https://www.jrrgo.com/" style="color: #0D97CE;">click here</a> to return to the app.
-        </p>
-    </div>
-
-    <style>
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-            font-family: Arial, sans-serif;
-        }
-    </style>
+<body style="font-family: Arial; text-align:center; padding:40px;">
+  <h1 style="color:#0D97CE;">Processing Password Reset…</h1>
+  <p>Please wait while we prepare your password reset session.</p>
 </body>
 </html>
