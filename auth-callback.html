@@ -3,7 +3,7 @@
 <head>
     <title>Authentication Callback - JRR Immigration</title>
     <script>
-        // Enhanced auth callback processor with comprehensive error handling
+        // OTP Auth Callback Processor - Simplified for OTP flow
         function processAuthCallback() {
             console.log('🔄 Starting authentication callback processing...');
             
@@ -13,18 +13,18 @@
                 
                 // Parse fragment parameters (URL after #)
                 const fragment = url.hash.substring(1);
+                console.log('🔍 Fragment:', fragment);
+                
                 const params = new URLSearchParams(fragment);
                 
-                // Extract all relevant parameters
-                const accessToken = params.get('access_token'); // PKCE token
+                // Extract OTP parameters
+                const token = params.get('token'); // OTP token
                 const type = params.get('type');
-                const traditionalToken = params.get('token'); // 6-digit code
                 const error = params.get('error');
                 const errorDescription = params.get('error_description');
                 
                 console.log('📦 Extracted Parameters:', { 
-                    access_token: accessToken ? `PKCE (${accessToken.length} chars)` : 'null',
-                    token: traditionalToken ? `Traditional (${traditionalToken.length} chars)` : 'null', 
+                    token: token ? `OTP (${token.length} chars)` : 'null',
                     type: type,
                     error: error,
                     error_description: errorDescription
@@ -40,11 +40,11 @@
                 // Process recovery flow (password reset)
                 if (type === 'recovery') {
                     console.log('🎯 Processing recovery flow...');
-                    processRecoveryFlow(accessToken, traditionalToken);
+                    processRecoveryFlow(token);
                     return;
                 }
                 
-                // Handle other flow types if needed in future
+                // Handle other flow types
                 console.log('ℹ️ Unknown or unsupported flow type:', type);
                 redirectToApp('?auth_error=unsupported_flow');
                 
@@ -54,43 +54,30 @@
             }
         }
 
-        function processRecoveryFlow(accessToken, traditionalToken) {
+        function processRecoveryFlow(token) {
             try {
-                // FIXED: PREFER PKCE CODE OVER TRADITIONAL TOKEN (as per original logic)
-                if (accessToken && accessToken.startsWith('pkce_')) {
-                    console.log('🎯 Using PKCE recovery token (PREFERRED):', {
-                        length: accessToken.length,
-                        codePreview: accessToken.substring(0, 20) + '...'
+                // OTP LOGIC - token is required
+                if (token) {
+                    console.log('🎯 Using OTP recovery token:', {
+                        length: token.length,
+                        tokenPreview: token.length > 20 ? token.substring(0, 20) + '...' : token
                     });
                     
-                    // Store PKCE token - THIS IS WHAT SUPABASE EXPECTS
+                    // Store OTP token
                     storeRecoveryTokens({
-                        token: accessToken,
+                        token: token,
                         type: 'recovery',
-                        tokenType: 'pkce'
+                        tokenType: 'otp'
                     });
                     
-                } else if (traditionalToken) {
-                    console.log('🎯 Using traditional recovery token (FALLBACK):', {
-                        length: traditionalToken.length,
-                        token: traditionalToken
-                    });
-                    
-                    // Store traditional token as fallback
-                    storeRecoveryTokens({
-                        token: traditionalToken,
-                        type: 'recovery', 
-                        tokenType: 'traditional'
-                    });
+                    console.log('✅ Recovery tokens stored successfully');
+                    redirectToApp('?reset_initiated=true&source=auth_callback');
                     
                 } else {
                     console.error('❌ No valid recovery tokens found');
-                    handleAuthError('missing_tokens', 'No access_token or token parameter found');
+                    handleAuthError('missing_tokens', 'No token parameter found');
                     return;
                 }
-                
-                console.log('✅ Recovery tokens stored successfully');
-                redirectToApp('?reset_initiated=true&source=auth_callback');
                 
             } catch (error) {
                 console.error('❌ Error in recovery flow processing:', error);
@@ -116,7 +103,7 @@
                 timestamp: timestamp
             });
             
-            // Also try to store in sessionStorage as backup
+            // Also store in sessionStorage as backup
             try {
                 sessionStorage.setItem('recovery_flow_active', 'true');
                 sessionStorage.setItem('recovery_token_backup', tokenData.token);
@@ -150,20 +137,20 @@
             
             console.log('🔄 Redirecting to:', redirectUrl);
             
+            // Clear sensitive data from URL
+            cleanupUrl();
+            
             // Use replace to avoid back button issues
             setTimeout(() => {
                 window.location.replace(redirectUrl);
-            }, 500); // Small delay to ensure storage operations complete
+            }, 300);
         }
 
         function cleanupUrl() {
             try {
                 // Clear any sensitive data from URL after processing
-                if (window.location.hash.includes('access_token') || 
-                    window.location.hash.includes('token')) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                    console.log('🧹 Sensitive URL parameters cleared');
-                }
+                window.history.replaceState({}, document.title, window.location.pathname);
+                console.log('🧹 Sensitive URL parameters cleared from address bar');
             } catch (error) {
                 console.log('ℹ️ URL cleanup not possible:', error);
             }
@@ -172,33 +159,25 @@
         function initializeAuthCallback() {
             console.log('🚀 Initializing authentication callback...');
             
-            // Add a small delay to ensure DOM is ready and any redirects can complete
+            // Small delay to ensure DOM is ready
             setTimeout(() => {
                 try {
                     processAuthCallback();
                 } catch (error) {
                     console.error('💥 Failed to process auth callback:', error);
-                    // Final fallback - redirect to main app
                     redirectToApp('?auth_error=initialization_failed');
                 }
             }, 100);
         }
 
-        // Enhanced event listeners for robust initialization
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('📄 DOM content loaded, starting auth processing...');
-            initializeAuthCallback();
-        });
-
-        // Fallback: if DOMContentLoaded already fired, initialize immediately
+        // Event listener for DOM ready
         if (document.readyState === 'loading') {
-            console.log('⏳ DOM still loading, waiting for DOMContentLoaded...');
+            document.addEventListener('DOMContentLoaded', initializeAuthCallback);
         } else {
-            console.log('⚡ DOM already ready, initializing immediately...');
             initializeAuthCallback();
         }
 
-        // Global error handler as final safety net
+        // Global error handler
         window.addEventListener('error', function(event) {
             console.error('💥 Global error caught:', event.error);
             redirectToApp('?auth_error=global_error');
