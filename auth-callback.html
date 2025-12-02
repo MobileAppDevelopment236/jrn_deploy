@@ -4,112 +4,142 @@
   <title>Password Reset - JRR GO</title>
 
   <script>
-  console.log("🔐 Auth Callback Loaded:", window.location.href);
+    console.log("🔐 Auth Callback Loaded:", window.location.href);
 
-  function extractToken() {
-    const hash = window.location.hash.substring(1);
-    console.log("📦 Raw Hash:", hash);
+    /* -----------------------------------------------------------
+       1. Extract token, type, email from URL fragment (#...)
+    ----------------------------------------------------------- */
+    function extractToken() {
+      const hash = window.location.hash.substring(1);
+      console.log("📦 Raw Hash:", hash);
 
-    if (hash.startsWith("{")) {
-      try {
-        const json = JSON.parse(hash);
-        console.log("📄 Parsed JSON token:", json);
-        return {
-          token: json.access_token || json.token || "",
-          type: json.type || "",
-          email: json.email || ""
-        };
-      } catch (e) {
-        console.log("⚠️ JSON parse failed:", e);
+      // --- CASE 1: JSON fragment (#{"type":"recovery","token":"xxx"}) ---
+      if (hash.startsWith("{")) {
+        try {
+          const json = JSON.parse(hash);
+          console.log("📄 Parsed JSON token:", json);
+
+          return {
+            token: json.access_token || json.token || "",
+            type: json.type || "",
+            email: json.email || ""
+          };
+        } catch (e) {
+          console.log("⚠️ JSON parse failed:", e);
+        }
       }
+
+      // --- CASE 2: Normal fragment (#token=xxx&type=recovery&email=...) ---
+      const params = new URLSearchParams(hash);
+
+      const parsed = {
+        token: params.get("token") || params.get("access_token") || "",
+        type: params.get("type") || "",
+        email: decodeURIComponent(params.get("email") || "")
+      };
+
+      console.log("🔍 Parsed Params:", parsed);
+      return parsed;
     }
 
-    const params = new URLSearchParams(hash);
-    const data = {
-      token: params.get("token") ||
-             params.get("access_token") || "",
-      type: params.get("type") || "",
-      email: params.get("email") || ""
-    };
+    /* -----------------------------------------------------------
+       2. Save token & email & flags into storage
+    ----------------------------------------------------------- */
+    function storeRecovery({ email, token, type }) {
+      console.log("💾 Storing Recovery Data…");
 
-    console.log("🔍 Parsed Params:", data);
-    return data;
-  }
+      // main storage
+      localStorage.setItem("supabase_recovery_email", email || "");
+      localStorage.setItem("supabase_recovery_token", token || "");
+      localStorage.setItem("supabase_recovery_type", type || "");
+      localStorage.setItem("password_reset_required", "true");
 
-  function storeRecovery({ email, token, type }) {
-    console.log("💾 Storing Recovery Data…");
+      // backup for race conditions
+      try {
+        sessionStorage.setItem("supabase_recovery_email_backup", email || "");
+        sessionStorage.setItem("supabase_recovery_token_backup", token || "");
+      } catch (e) {
+        console.log("ℹ️ sessionStorage backup failed:", e);
+      }
 
-    localStorage.setItem("supabase_recovery_email", email || "");
-    localStorage.setItem("supabase_recovery_token", token || "");
-    localStorage.setItem("supabase_recovery_type", type || "");
-    localStorage.setItem("password_reset_required", "true");
-
-    try {
-      sessionStorage.setItem("supabase_recovery_email_backup", email || "");
-      sessionStorage.setItem("supabase_recovery_token_backup", token || "");
-    } catch (e) {
-      console.log("ℹ️ sessionStorage backup failed:", e);
+      console.log("✅ Stored:", { email, token, type });
     }
 
-    console.log("✅ Stored:", { email, token, type });
-  }
+    /* -----------------------------------------------------------
+       3. Redirect back to Flutter web app safely
+    ----------------------------------------------------------- */
+    function redirectBack(email) {
+      console.log("🔄 Redirecting back to app");
 
-  function redirectBack(email) {
-    console.log("🔄 Redirecting back to app");
+      const base = "https://www.jrrgo.com/";
+      const params = new URLSearchParams();
 
-    const base = "https://www.jrrgo.com/";
-    const params = new URLSearchParams();
+      params.set("reset_initiated", "true");
 
-    params.set("reset_initiated", "true");
-    if (email) params.set("recovery_email", email);
+      if (email) {
+        params.set("recovery_email", email);
+      }
 
-    try {
-      window.history.replaceState({}, "", "/auth-callback.html");
-    } catch (e) {}
+      // Clean sensitive URL
+      try {
+        window.history.replaceState({}, "", "/auth-callback.html");
+      } catch (e) {}
 
-    const redirectUrl = base + "?" + params.toString();
-    console.log("➡️ Redirect URL:", redirectUrl);
+      const redirectUrl = base + "?" + params.toString();
+      console.log("➡️ Redirect URL:", redirectUrl);
 
-    setTimeout(() => {
-      window.location.replace(redirectUrl);
-    }, 200);
-  }
-
-  function init() {
-    const extracted = extractToken();
-    console.log("📦 Final Extracted:", extracted);
-
-    const token = extracted.token || "";
-
-    if (!token || token.length < 3) {
-      console.error("❌ Invalid token received");
-      redirectBack(extracted.email || "");
-      return;
+      setTimeout(() => {
+        window.location.replace(redirectUrl);
+      }, 200);
     }
 
-    if (extracted.type !== "recovery") {
-      console.error("❌ Not a recovery flow");
-      redirectBack(extracted.email || "");
-      return;
+    /* -----------------------------------------------------------
+       4. Main Initialization
+    ----------------------------------------------------------- */
+    function init() {
+      const extracted = extractToken();
+      console.log("📦 Final Extracted:", extracted);
+
+      const token = extracted.token || "";
+
+      // Validate token (OTP or access_token)
+      if (!token || token.length < 3) {
+        console.error("❌ Invalid token received");
+        redirectBack(extracted.email || "");
+        return;
+      }
+
+      // Validate flow type
+      if (extracted.type !== "recovery") {
+        console.error("❌ Not a recovery flow");
+        redirectBack(extracted.email || "");
+        return;
+      }
+
+      // Validate email
+      if (!extracted.email || extracted.email.length < 3) {
+        console.warn("⚠️ Email missing in URL");
+        storeRecovery({
+          email: "",
+          token: token,
+          type: extracted.type
+        });
+        redirectBack("");
+        return;
+      }
+
+      // Store valid recovery data
+      storeRecovery({
+        email: extracted.email,
+        token: token,
+        type: extracted.type
+      });
+
+      // Redirect back to Flutter web app
+      redirectBack(extracted.email);
     }
 
-    if (!extracted.email || extracted.email.length < 3) {
-      console.warn("⚠️ Email missing in URL");
-      storeRecovery({ email: "", token: token, type: extracted.type });
-      redirectBack("");
-      return;
-    }
-
-    storeRecovery({
-      email: extracted.email,
-      token: token,
-      type: extracted.type
-    });
-
-    redirectBack(extracted.email);
-  }
-
-  document.addEventListener("DOMContentLoaded", init);
+    document.addEventListener("DOMContentLoaded", init);
   </script>
 
 </head>
