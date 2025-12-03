@@ -28,7 +28,8 @@ function handleAuthTokens() {
     const resetInitiated = queryParams.get("reset_initiated");
 
     const hashParams = new URLSearchParams(url.hash.substring(1));
-    const token = hashParams.get("access_token");
+    const token = hashParams.get("access_token") || hashParams.get("token");
+
     const type = hashParams.get("type");
 
     console.log("🔐 Token Detection:", {
@@ -51,28 +52,29 @@ function handleAuthTokens() {
     // DIRECT TOKEN HANDLING (#access_token... in URL)
     // -----------------------------
     if (token && type === "recovery") {
-      console.log("🎯 Direct token detected");
+  console.log("🎯 Direct token detected");
 
-      const tokenType =
-        token.startsWith("pkce_") ? "pkce" :
-        token.length === 6 ? "otp" :
-        "unknown";
+  const tokenType =
+    token.startsWith("pkce_") ? "pkce" :
+    token.length === 6 ? "otp" :
+    "unknown";
 
-      // Main storage for the Flutter reset screen
-      localStorage.setItem("password_reset_required", "true");
-      localStorage.setItem("supabase_recovery_token", token);
-      localStorage.setItem("supabase_recovery_type", "recovery");
-      localStorage.setItem("token_type", tokenType);
-      localStorage.setItem("reset_timestamp", new Date().toISOString());
+  // Extract email safely
+  const email = queryParams.get("recovery_email") || "";
 
-      // Sync storage for WebAuthHandler to pull into SharedPreferences
-      
+  // Store required fields
+  localStorage.setItem("password_reset_required", "true");
+  localStorage.setItem("supabase_recovery_token", token);
+  localStorage.setItem("supabase_recovery_type", "recovery");
+  localStorage.setItem("supabase_recovery_email", email);   // <---- MISSING LINE (THE ROOT FIX)
+  localStorage.setItem("token_type", tokenType);
+  localStorage.setItem("reset_timestamp", new Date().toISOString());
 
-      console.log("✅ Tokens stored in BOTH locations");
+  console.log("✅ Tokens stored correctly");
 
-      // Remove token from URL
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
+  window.history.replaceState({}, document.title, window.location.pathname);
+}
+
 
     // -----------------------------
     // Clean leftover hash fragments
