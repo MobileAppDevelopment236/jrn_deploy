@@ -19,94 +19,111 @@
   <link rel="manifest" href="manifest.json">
 
   <script>
+    /************************************************************
+     *  CLEAN + FIXED TOKEN HANDLER
+     *  Handles:
+     *   ✔ OTP tokens (#access_token=123456&type=recovery)
+     *   ✔ PKCE tokens (#access_token=pkce_xxxxx&type=recovery)
+     *   ✔ Email passing (recovery_email=…)
+     *   ✔ Redirect cleanup
+     ************************************************************/
     function handleAuthTokens() {
       try {
         const url = new URL(window.location.href);
-        console.log("🌐 Initial URL:", url.href);
-
         const queryParams = url.searchParams;
-        const resetInitiated = queryParams.get("reset_initiated");
 
-        const hashParams = new URLSearchParams(url.hash.substring(1));
-        const token = hashParams.get("access_token") || hashParams.get("token");
-        const type = hashParams.get("type");
+        // Flags from auth-callback.html
+        const resetInitiated = queryParams.get("reset_initiated") === "true";
+        const recoveryEmail = queryParams.get("recovery_email") || "";
 
-        console.log("🔐 Token Detection:", {
-          hasQueryFlag: resetInitiated === "true",
-          hasDirectToken: !!token,
-          type: type,
-        });
+        // Hash params from Supabase callback
+        const hashParams = new URLSearchParams(url.hash.replace("#", ""));
+        const token = hashParams.get("access_token") || hashParams.get("token") || null;
+        const type = hashParams.get("type") || null;
 
-        // -----------------------------
-        // RESET INITIATED
-        // -----------------------------
-        if (resetInitiated === "true") {
-          console.log("🔄 Reset flow initiated via redirect");
-          const cleanUrl = window.location.pathname;
-          window.history.replaceState({}, document.title, cleanUrl);
+        console.log("🌐 Full URL:", url.href);
+        console.log("📩 Query Email:", recoveryEmail);
+        console.log("🔐 Token Data:", { token, type });
+
+        /***********************
+         * 1️⃣ RESET INITIATED FLAG
+         ***********************/
+        if (resetInitiated) {
+          console.log("🔄 Reset initiated → cleaning URL");
+          window.history.replaceState({}, document.title, window.location.pathname);
           return;
         }
 
-        // -----------------------------
-        // DIRECT TOKEN HANDLING
-        // -----------------------------
+        /***********************
+         * 2️⃣ DIRECT TOKEN HANDLING
+         *    #access_token=...&type=recovery
+         ***********************/
         if (token && type === "recovery") {
-          console.log("🎯 Direct token detected");
+          console.log("🎯 Recovery token detected:", token);
 
-          const tokenType =
-            token.startsWith("pkce_") ? "pkce" :
-            token.length === 6 ? "otp" :
-            "unknown";
+          // Detect token type
+          let tokenType = "unknown";
+          if (token.startsWith("pkce_")) tokenType = "pkce";
+          else if (token.length === 6) tokenType = "otp";
 
-          // ✅ FIX: capture email passed from auth-callback
-          const email = queryParams.get("recovery_email") || "";
-
+          /***********************
+           * REQUIRED FIX
+           * Store all values — including email
+           ***********************/
           localStorage.setItem("password_reset_required", "true");
           localStorage.setItem("supabase_recovery_token", token);
           localStorage.setItem("supabase_recovery_type", "recovery");
-          localStorage.setItem("supabase_recovery_email", email); // IMPORTANT FIX
           localStorage.setItem("token_type", tokenType);
+          localStorage.setItem("supabase_recovery_email", recoveryEmail);
           localStorage.setItem("reset_timestamp", new Date().toISOString());
 
-          console.log("✅ Tokens stored correctly");
+          console.log("✅ Stored reset session:", {
+            token,
+            tokenType,
+            recoveryEmail
+          });
 
+          // Clean the URL
           window.history.replaceState({}, document.title, window.location.pathname);
+          return;
         }
 
-        // -----------------------------
-        // CLEAN LEFTOVER HASH
-        // -----------------------------
+        /***********************
+         * 3️⃣ CLEAN HASH FRAGMENTS
+         ***********************/
         if (url.hash.includes("access_token") || url.hash.includes("type=recovery")) {
+          console.log("🧹 Cleaning hash fragments");
           window.history.replaceState({}, document.title, window.location.pathname);
-          console.log("🧹 Cleaned token fragments");
         }
 
-      } catch (error) {
-        console.log("❌ Error in token handler:", error);
+      } catch (err) {
+        console.error("❌ Token handler error:", err);
       }
     }
 
-    // Flutter Web Bridge
-    window.addEventListener("load", function () {
+    /************************************************************
+     *  FLUTTER ↔ JS BRIDGE
+     ************************************************************/
+    window.addEventListener("load", () => {
       window.flutterChannel = {
-        getItem: key => localStorage.getItem(key),
-        setItem: (key, value) => localStorage.setItem(key, value),
-        removeItem: key => localStorage.removeItem(key),
+        getItem: (k) => localStorage.getItem(k),
+        setItem: (k, v) => localStorage.setItem(k, v),
+        removeItem: (k) => localStorage.removeItem(k)
       };
     });
 
-    // Run when Flutter is ready
-    window.addEventListener("flutter-first-frame", function () {
+    // Run after Flutter has drawn frame
+    window.addEventListener("flutter-first-frame", () => {
       setTimeout(handleAuthTokens, 100);
     });
 
-    // Fallback
-    document.addEventListener("DOMContentLoaded", function () {
+    // Slow browser fallback
+    document.addEventListener("DOMContentLoaded", () => {
       setTimeout(handleAuthTokens, 500);
     });
   </script>
-
 </head>
+
 <body>
   <script src="flutter_bootstrap.js" async></script>
 </body>
